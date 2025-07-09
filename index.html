@@ -1,0 +1,2370 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>LiteGraph for 🐷PyG</title>
+	<link rel="stylesheet" type="text/css" href="litegraph.css">
+	<script type="text/javascript" src="litegraph.js"></script>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			font-family: Arial, sans-serif;
+			overflow: hidden;
+			height: 100vh;
+			display: flex;
+			flex-direction: column;
+		}
+		
+		/* Force saved-nodes panel and its buttons to be visible */
+		#saved-nodes {
+			display: block !important;
+			visibility: visible !important;
+			opacity: 1 !important;
+			height: auto !important;
+			overflow: visible !important;
+			position: relative !important;
+			z-index: 1000 !important;
+		}
+		
+		#saved-nodes button {
+			display: block !important;
+			visibility: visible !important;
+			opacity: 1 !important;
+			position: relative !important;
+			z-index: 1001 !important;
+		}
+
+		/* Top Panel */
+		.top-panel {
+			height: 40px;
+			background: #2d2d2d;
+			border-bottom: 1px solid #444;
+			display: flex;
+			align-items: center;
+			padding: 0 10px;
+			gap: 10px;
+		}
+
+		.top-panel button {
+			background: #404040;
+			border: 1px solid #555;
+			color: #fff;
+			padding: 5px 12px;
+			border-radius: 3px;
+			cursor: pointer;
+			font-size: 12px;
+		}
+
+		.top-panel button:hover {
+			background: #505050;
+		}
+
+		.top-panel .title {
+			color: #fff;
+			font-weight: bold;
+			margin-left: 10px;
+		}
+
+		/* Main Content */
+		.main-content {
+			flex: 1;
+			display: flex;
+			height: calc(100vh - 40px);
+		}
+
+		/* Left Panel */
+		.left-panel {
+			width: 250px;
+			background: #252525;
+			border-right: 1px solid #444;
+			display: flex;
+			flex-direction: column;
+			overflow-y: hidden; /* Prevent double scrollbars */
+			height: 100%; /* Ensure it takes full height */
+		}
+
+		.panel-section {
+			border-bottom: 1px solid #444;
+			display: flex;
+			flex-direction: column;
+			flex: 0 0 auto; /* Don't grow, don't shrink, auto basis */
+		}
+
+		/* Make the Available Nodes section take more space */
+		.panel-section:nth-child(2) {
+			flex: 1 0 auto; /* Allow this section to grow */
+			overflow: hidden; /* Prevent double scrollbars */
+			display: flex;
+			flex-direction: column;
+		}
+
+		.panel-header {
+			background: #2d2d2d;
+			color: #fff;
+			padding: 8px 12px;
+			font-size: 12px;
+			font-weight: bold;
+			border-bottom: 1px solid #444;
+			cursor: pointer;
+			user-select: none;
+		}
+
+		.panel-content {
+			padding: 8px;
+			color: #ccc;
+			font-size: 12px;
+			max-height: 300px; /* Increased from 200px to 300px */
+			overflow-y: auto;
+		}
+
+		/* Specific styling for Available Nodes panel */
+		#nodes-list.panel-content {
+			max-height: none; /* Remove max height constraint */
+			height: 100%; /* Take full height */
+			overflow-y: auto;
+			flex: 1; /* Take available space */
+			display: flex;
+			flex-direction: column;
+		}
+
+		/* Make the analyzed nodes container scrollable and take available space */
+		#analyzed-nodes-container {
+			overflow-y: auto;
+			flex: 1;
+			margin-top: 10px;
+		}
+
+		.file-item, .node-item {
+			padding: 4px 8px;
+			cursor: pointer;
+			border-radius: 2px;
+			margin: 1px 0;
+		}
+
+		.file-item:hover, .node-item:hover {
+			background: #404040;
+		}
+
+		.node-item {
+			background: #333;
+			border: 1px solid #555;
+			margin: 2px 0;
+			text-align: center;
+		}
+
+		.node-item:hover {
+			background: #444;
+		}
+
+		/* Canvas Area */
+		.canvas-area {
+			flex: 1;
+			position: relative;
+			background: #1a1a1a;
+		}
+
+		#mycanvas {
+			width: 100%;
+			height: 100%;
+			display: block;
+		}
+
+		/* Scrollbars */
+		::-webkit-scrollbar {
+			width: 8px;
+		}
+
+		::-webkit-scrollbar-track {
+			background: #2d2d2d;
+		}
+
+		::-webkit-scrollbar-thumb {
+			background: #555;
+			border-radius: 4px;
+		}
+
+		::-webkit-scrollbar-thumb:hover {
+			background: #666;
+		}
+	</style>
+</head>
+<body>
+	<!-- Top Panel -->
+	<div class="top-panel">
+		<button onclick="openFile()">📁 Open LiteGraph JSON</button>
+		<button onclick="saveFile()">💾 Save LiteGraph JSON</button>
+		<button onclick="newFile()">📄 New LiteGraph</button>
+		<button onclick="exportGraph()">📤 Export to PyG Graph JSON</button>
+		<button onclick="setupRunWithScript()" style="background: #4CAF50;">▶️ Run Selected PyG Script</button>
+		<span class="title">LiteGraph for 🐷PyG</span>
+	</div>
+
+	<!-- Main Content -->
+	<div class="main-content">
+		<!-- Left Panel -->
+		<div class="left-panel">
+			<!-- File Explorer (temporarily hidden) -->
+			<div class="panel-section" style="display: none;">
+				<div class="panel-header" onclick="toggleSection('file-explorer')">
+					📁 File Explorer
+				</div>
+				<div id="file-explorer" class="panel-content">
+				<div style="margin-bottom: 10px;">
+					<button onclick="browseLocalFolder()" style="width: 100%; padding: 5px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer;">📁 Browse Local Folder</button>
+				</div>
+				<div id="json-files-list">
+					<div style="color: #666; font-style: italic; text-align: center; padding: 10px;">Click "Browse Local Folder" to load JSON files</div>
+				</div>
+			</div>
+			</div>
+
+			<!-- Available Nodes -->
+			<div class="panel-section">
+				<div class="panel-header" onclick="toggleSection('nodes-list')">
+					🔧 Available Nodes
+				</div>
+				<div id="nodes-list" class="panel-content">
+					<div style="margin-bottom: 10px;">
+						<button onclick="analyzeCodeFolder()" style="width: 100%; padding: 5px; background: #FF9800; color: white; border: none; border-radius: 3px; cursor: pointer;">🔍 Get PyG Nodes from Folder</button>
+					</div>
+
+					<div class="node-item" draggable="true" ondragstart="dragNode(event, 'PyG')">PyG general node</div>
+					<div id="analyzed-nodes-container">
+						<!-- Analyzed nodes will be added here -->
+					</div>
+				</div>
+			</div>
+
+			<!-- Saved Nodes -->
+			<div class="panel-section">
+				<div class="panel-header" onclick="toggleSection('saved-nodes')">
+					💾 Saved Nodes
+				</div>
+				<div id="saved-nodes" class="panel-content" style="position: relative; z-index: 1000; display: block !important; visibility: visible !important; opacity: 1 !important;">
+					<div style="margin-bottom: 10px; display: flex !important; gap: 5px; position: relative; z-index: 1001;">
+						<button onclick="exportSavedNodes()" style="flex: 1; padding: 8px; background: #484a48; color: white; border: 2px solid white; border-radius: 3px; cursor: pointer; font-size: 12px; position: relative; z-index: 1002; font-weight: bold; display: block !important; visibility: visible !important; opacity: 1 !important;">📤 Save Loaded Nodes as JSON</button>
+						<button onclick="importSavedNodes()" style="flex: 1; padding: 8px; background: #2196F3; color: white; border: 2px solid white; border-radius: 3px; cursor: pointer; font-size: 12px; position: relative; z-index: 1002; font-weight: bold; display: block !important; visibility: visible !important; opacity: 1 !important;">📥 Load Nodes from JSON</button>
+					</div>
+					<div style="margin-bottom: 10px; position: relative; z-index: 1001; display: block !important;">
+						<button onclick="clearSavedNodes()" style="width: 100%; padding: 8px; background: #591703; color: white; border: 2px solid white; border-radius: 3px; cursor: pointer; font-size: 12px; position: relative; z-index: 1002; font-weight: bold; display: block !important; visibility: visible !important; opacity: 1 !important;">🗑️ Clear Loaded Nodes</button>
+					</div>
+					<!-- Saved nodes will be dynamically added here -->
+				</div>
+			</div>
+		</div>
+
+		<!-- Canvas Area -->
+		<div class="canvas-area">
+			<canvas id='mycanvas'></canvas>
+		</div>
+	</div>
+
+	<script>
+		// Initialize LiteGraph
+		var graph = new LGraph();
+		var canvas = new LGraphCanvas("#mycanvas", graph);
+		var analyzedNodes = []; // Store analyzed nodes from code folder
+
+		// Initialize with an empty graph
+
+		graph.start();
+
+		// Resize canvas to fit container
+		function resizeCanvas() {
+			var canvasArea = document.querySelector('.canvas-area');
+			var canvas = document.getElementById('mycanvas');
+			canvas.width = canvasArea.clientWidth;
+			canvas.height = canvasArea.clientHeight;
+			if (window.canvas) {
+				window.canvas.resize();
+			}
+		}
+
+		// Initial resize and window resize handler
+		window.addEventListener('resize', resizeCanvas);
+		setTimeout(resizeCanvas, 100);
+
+		// Top panel functions
+		function openFile() {
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.accept = '.json';
+			input.onchange = function(e) {
+				var file = e.target.files[0];
+				if (file) {
+					var reader = new FileReader();
+					reader.onload = function(e) {
+						try {
+							var data = JSON.parse(e.target.result);
+							
+							// Ask user if they want to replace or merge the graph
+							const shouldReplace = confirm(`Do you want to replace the current graph with "${file.name}"?\n\nClick OK to replace the current graph.\nClick Cancel to keep your current work.`);
+							
+							if (shouldReplace) {
+								// Load the graph with replacement (this will clear the canvas)
+								graph.configure(data);
+								// alert('File loaded successfully!');
+							} else {
+								// User chose to keep current work
+								// alert('Operation cancelled. Current graph was preserved.');
+							}
+						} catch (err) {
+							alert('Error loading file: ' + err.message);
+						}
+					};
+					reader.readAsText(file);
+				}
+			};
+			input.click();
+		}
+
+		function saveFile() {
+			console.log('Save operation started - nodes before save:', graph.list_of_graphnodes ? graph.list_of_graphnodes.length : 0);
+			
+			// Store current graph state as backup
+			var graphBackup = graph.serialize();
+			
+			try {
+				var data = JSON.stringify(graphBackup, null, 2);
+				var blob = new Blob([data], {type: 'application/json'});
+				var url = URL.createObjectURL(blob);
+				var a = document.createElement('a');
+				
+				// Set attributes to prevent navigation
+				a.href = url;
+				a.download = 'graph.json';
+				a.target = '_self';
+				a.style.display = 'none';
+				
+				// Add to DOM temporarily
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				
+				// Add a small delay before revoking the URL to prevent any timing issues
+				setTimeout(() => {
+					URL.revokeObjectURL(url);
+					console.log('Save operation completed - nodes after save:', graph.list_of_graphnodes ? graph.list_of_graphnodes.length : 0);
+					
+					// Check if canvas was unexpectedly cleared and restore if needed
+					if (graph.list_of_graphnodes && graph.list_of_graphnodes.length === 0) {
+						console.error('WARNING: Canvas was cleared after save operation! Attempting to restore...');
+						graph.configure(graphBackup);
+						alert('The canvas was unexpectedly cleared after saving, but has been restored from backup.');
+					} else {
+						console.log('Save completed successfully without issues.');
+					}
+				}, 100);
+				
+			} catch (error) {
+				console.error('Error during save operation:', error);
+				alert('Error saving file: ' + error.message);
+			}
+			
+			// No need to reload the graph after saving
+		}
+
+		function newFile() {
+			if (confirm('Create new graph? This will clear the current graph.')) {
+				graph.clear();
+			}
+		}
+
+		function exportGraph(customFilename = 'pyingraph_export.json') {
+			// Convert LiteGraph format to PyInGraph format
+			var liteGraphData = graph.serialize();
+			var pyInGraphData = convertToPyInGraphFormat(liteGraphData);
+			
+			// Download the converted file
+			var data = JSON.stringify(pyInGraphData, null, 2);
+			var blob = new Blob([data], {type: 'application/json'});
+			var url = URL.createObjectURL(blob);
+			var a = document.createElement('a');
+			a.href = url;
+			a.download = customFilename;
+			a.click();
+			URL.revokeObjectURL(url);
+
+			// Return the data for potential further use without clearing the canvas
+			return { data, pyInGraphData };
+		}
+
+		// Function to set up running a Python script with the exported graph
+		function setupRunWithScript() {
+			// Create a dialog for script selection and execution
+			const dialog = document.createElement('div');
+			dialog.style.cssText = `
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				background: #2d2d2d;
+				border: 2px solid #4CAF50;
+				border-radius: 8px;
+				padding: 20px;
+				min-width: 500px;
+				max-width: 80%;
+				max-height: 80vh;
+				overflow-y: auto;
+				z-index: 1000;
+				color: #fff;
+				font-family: Arial, sans-serif;
+				box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+			`;
+
+			dialog.innerHTML = `
+				<h3 style="margin-top: 0; color: #4CAF50;">Run Python Script with Exported Graph</h3>
+				
+				<div style="margin-bottom: 15px;">
+					<label style="display: block; margin-bottom: 5px; font-weight: bold;">Step 1: Select Python Script</label>
+					<div style="display: flex; gap: 10px;">
+						<input type="text" id="selected-script-path" placeholder="No script selected" style="flex: 1; padding: 8px; background: #404040; border: 1px solid #555; color: #fff; border-radius: 3px;" readonly>
+						<button id="browse-script-btn" style="background: #404040; border: 1px solid #555; color: #fff; padding: 8px 12px; border-radius: 3px; cursor: pointer;">Browse</button>
+					</div>
+				</div>
+
+				<div style="margin-bottom: 15px;">
+					<label style="display: block; margin-bottom: 5px; font-weight: bold;">Step 2: Export Graph</label>
+					<div style="display: flex; gap: 10px;">
+						<input type="text" id="export-filename" value="exported_graph.json" style="flex: 1; padding: 8px; background: #404040; border: 1px solid #555; color: #fff; border-radius: 3px;">
+						<button id="export-graph-btn" style="background: #404040; border: 1px solid #555; color: #fff; padding: 8px 12px; border-radius: 3px; cursor: pointer;">Export</button>
+					</div>
+				</div>
+
+				<div style="margin-bottom: 15px;">
+					<label style="display: block; margin-bottom: 5px; font-weight: bold;">Step 3: Run Command</label>
+					<div style="background: #1a1a1a; padding: 10px; border-radius: 5px; font-family: monospace; margin-bottom: 10px; white-space: pre-wrap;" id="run-command">python <span style="color: #888;">[script_path]</span> <span style="color: #888;">[exported_graph.json]</span></div>
+					<div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">
+						<strong>Note:</strong> Due to browser security restrictions, we cannot directly execute Python scripts from the browser. 
+						You'll need to run this command manually in your terminal/command prompt.
+					</div>
+					<button id="copy-command-btn" style="background: #404040; border: 1px solid #555; color: #fff; padding: 8px 12px; border-radius: 3px; cursor: pointer; width: 100%;">Copy Command to Clipboard</button>
+				</div>
+
+				<div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+					<button id="close-dialog-btn" style="background: #660000; border: 1px solid #555; color: #fff; padding: 8px 15px; border-radius: 3px; cursor: pointer;">Close</button>
+				</div>
+			`;
+
+			document.body.appendChild(dialog);
+
+			// Get references to elements
+			const scriptPathInput = dialog.querySelector('#selected-script-path');
+			const browseScriptBtn = dialog.querySelector('#browse-script-btn');
+			const exportFilenameInput = dialog.querySelector('#export-filename');
+			const exportGraphBtn = dialog.querySelector('#export-graph-btn');
+			const runCommandDisplay = dialog.querySelector('#run-command');
+			const copyCommandBtn = dialog.querySelector('#copy-command-btn');
+			const closeDialogBtn = dialog.querySelector('#close-dialog-btn');
+
+			// Variables to store selected paths
+			let selectedScriptPath = '';
+			let selectedScriptDir = '';
+			let exportedGraphPath = exportFilenameInput.value;
+
+			// Update the command display
+			function updateCommandDisplay() {
+				if (selectedScriptPath && exportedGraphPath) {
+					runCommandDisplay.innerHTML = `python "${selectedScriptPath}" "${exportedGraphPath}"`;
+				} else {
+					runCommandDisplay.innerHTML = `python <span style="color: #888;">[script_path]</span> <span style="color: #888;">[exported_graph.json]</span>`;
+				}
+			}
+
+			// Handle script selection
+			browseScriptBtn.onclick = async () => {
+				try {
+					// Check if File System Access API is supported
+					if ('showOpenFilePicker' in window) {
+						const [fileHandle] = await window.showOpenFilePicker({
+							types: [{
+								description: 'Python Scripts',
+								accept: {
+									'text/x-python': ['.py']
+								}
+							}],
+							excludeAcceptAllOption: false,
+							multiple: false
+						});
+
+						const file = await fileHandle.getFile();
+						selectedScriptPath = file.name; // Just the filename for display
+
+						// Try to get the directory path if possible
+						try {
+							// This might not work in all browsers due to security restrictions
+							const dirHandle = await fileHandle.getParent();
+							if (dirHandle) {
+								selectedScriptDir = dirHandle.name || '';
+							}
+						} catch (err) {
+							console.log('Could not get parent directory:', err);
+							// This is expected in many browsers, so we don't show an error
+						}
+
+						scriptPathInput.value = selectedScriptPath;
+						updateCommandDisplay();
+					} else {
+						alert('Your browser does not support the File System Access API. Please use a modern browser like Chrome or Edge.');
+					}
+				} catch (err) {
+					if (err.name !== 'AbortError') {
+						console.error('Error selecting script:', err);
+						alert('Error selecting script: ' + err.message);
+					}
+				}
+			};
+
+			// Handle export filename change
+			exportFilenameInput.oninput = () => {
+				exportedGraphPath = exportFilenameInput.value;
+				updateCommandDisplay();
+			};
+
+			// Handle export button
+			exportGraphBtn.onclick = () => {
+				const filename = exportFilenameInput.value || 'exported_graph.json';
+				exportGraph(filename);
+				//alert(`Graph exported as "${filename}"`);
+				exportedGraphPath = filename;
+				updateCommandDisplay();
+			};
+
+			// Handle copy command
+			copyCommandBtn.onclick = () => {
+				const command = runCommandDisplay.textContent;
+				navigator.clipboard.writeText(command)
+					.then(() => {
+						copyCommandBtn.textContent = '✓ Copied!';
+						setTimeout(() => {
+							copyCommandBtn.textContent = 'Copy Command to Clipboard';
+						}, 2000);
+					})
+					.catch(err => {
+						console.error('Error copying command:', err);
+						alert('Error copying command: ' + err.message);
+					});
+			};
+
+			// Handle close button
+			closeDialogBtn.onclick = () => {
+				document.body.removeChild(dialog);
+			};
+
+			// Close on escape
+			document.addEventListener('keydown', function escHandler(e) {
+				if (e.key === 'Escape') {
+					document.body.removeChild(dialog);
+					document.removeEventListener('keydown', escHandler);
+				}
+			});
+		}
+
+		function convertToPyInGraphFormat(liteGraphData) {
+			var pyInGraphNodes = [];
+			var pyInGraphEdges = [];
+			var edgeIdCounter = 1;
+			
+			// Convert nodes
+			if (liteGraphData.nodes) {
+				liteGraphData.nodes.forEach(function(node, index) {
+					var pyInGraphNode = {
+						id: "node" + node.id,
+						name: node.title || node.type || ("Node " + node.id),
+						folder_url: "",
+						folder_path: "",
+						class_file: "",
+						class_name: "",
+						parameters: {}
+					};
+					
+					// Handle different node types
+					if (node.type === "basic/const") {
+						pyInGraphNode.folder_path = "local_modules";
+						pyInGraphNode.class_file = "mod_source_constant.py";
+						pyInGraphNode.class_name = "ConstantSource";
+						pyInGraphNode.parameters = {
+							value: node.properties && node.properties.value !== undefined ? node.properties.value : 0
+						};
+					} else if (node.type === "basic/watch") {
+						pyInGraphNode.folder_path = "local_modules";
+						pyInGraphNode.class_file = "mod_sink_print.py";
+						pyInGraphNode.class_name = "SinkPrint";
+						pyInGraphNode.parameters = {};
+					} else if (node.type === "PyG") {
+						// Use the configurable node's properties
+						pyInGraphNode.folder_path = node.properties && node.properties.folder_path ? node.properties.folder_path : "local_modules";
+						pyInGraphNode.class_file = node.properties && node.properties.selected_file ? node.properties.selected_file : "custom_module.py";
+						pyInGraphNode.class_name = node.properties && node.properties.class_name ? node.properties.class_name : "CustomNode";
+						
+						// Convert key_value_pairs to parameters
+						if (node.properties && node.properties.key_value_pairs) {
+							pyInGraphNode.parameters = JSON.parse(JSON.stringify(node.properties.key_value_pairs));
+						} else {
+							pyInGraphNode.parameters = {};
+						}
+					} else {
+						// Generic node handling
+						pyInGraphNode.folder_path = "local_modules";
+						pyInGraphNode.class_file = "generic_module.py";
+						pyInGraphNode.class_name = "GenericNode";
+						pyInGraphNode.parameters = node.properties ? JSON.parse(JSON.stringify(node.properties)) : {};
+					}
+					
+					pyInGraphNodes.push(pyInGraphNode);
+				});
+			}
+			
+			// Convert links to edges
+			if (liteGraphData.links) {
+				liteGraphData.links.forEach(function(link) {
+					// LiteGraph link format: [link_id, source_node_id, source_slot, target_node_id, target_slot, type]
+					var linkId = link[0];
+					var sourceNodeId = link[1];
+					var sourceSlot = link[2];
+					var targetNodeId = link[3];
+					var targetSlot = link[4];
+					var linkType = link[5];
+					
+					var pyInGraphEdge = {
+						id: "edge" + edgeIdCounter++,
+						source_node_id: "node" + sourceNodeId,
+						target_node_id: "node" + targetNodeId,
+						source_port_idx: sourceSlot,
+						target_port_idx: targetSlot,
+						properties: {
+							signal_type: linkType || "data_flow",
+							weight: 1.0
+						}
+					};
+					
+					pyInGraphEdges.push(pyInGraphEdge);
+				});
+			}
+			
+			// Create the final PyInGraph structure
+			var pyInGraphData = {
+				nodes: pyInGraphNodes,
+				edges: pyInGraphEdges,
+				metadata: {
+					version: "1.0",
+					description: "Exported from LiteGraph for PyG",
+					author: "LiteGraph for PyG User",
+					created: new Date().toISOString(),
+					tags: ["litegraph", "export"]
+				}
+			};
+			
+			return pyInGraphData;
+		}
+
+
+
+		// Left panel functions
+		function toggleSection(sectionId) {
+			var section = document.getElementById(sectionId);
+			console.log('Toggling section:', sectionId, 'Current display:', section.style.display);
+			
+			// Special case for saved-nodes panel - always keep it visible
+			if (sectionId === 'saved-nodes') {
+				section.style.display = 'block';
+				console.log('Forced saved-nodes to stay visible');
+				return;
+			}
+			
+			if (section.style.display === 'none') {
+				section.style.display = 'block';
+				console.log('Set to block');
+			} else {
+				section.style.display = 'none';
+				console.log('Set to none');
+			}
+		}
+
+		// File explorer functions
+		let currentFolderHandle = null;
+		let jsonFiles = [];
+
+		async function browseLocalFolder() {
+			try {
+				// Check if File System Access API is supported
+				if ('showDirectoryPicker' in window) {
+					// Use File System Access API
+					currentFolderHandle = await window.showDirectoryPicker();
+					await loadJsonFilesFromFolder(currentFolderHandle);
+				} else {
+					// Fallback: show message about browser support
+					alert('Your browser does not support the File System Access API. Please use a modern browser like Chrome 86+ or Edge 86+.\n\nAlternatively, you can use the "📂 Open" button in the top menu to load individual JSON files.');
+				}
+			} catch (err) {
+				if (err.name !== 'AbortError') {
+					console.error('Error accessing folder:', err);
+					alert('Error accessing folder: ' + err.message);
+				}
+			}
+		}
+
+		async function loadJsonFilesFromFolder(folderHandle) {
+			try {
+				jsonFiles = [];
+				const filesList = document.getElementById('json-files-list');
+				filesList.innerHTML = '<div style="color: #666; text-align: center; padding: 10px;">Loading files...</div>';
+
+				// Iterate through files in the folder
+				for await (const [name, handle] of folderHandle.entries()) {
+					if (handle.kind === 'file' && name.toLowerCase().endsWith('.json')) {
+						jsonFiles.push({ name, handle });
+					}
+				}
+
+				// Update the UI
+				updateJsonFilesList();
+			} catch (err) {
+				console.error('Error loading files:', err);
+				alert('Error loading files: ' + err.message);
+			}
+		}
+
+		function updateJsonFilesList() {
+			const filesList = document.getElementById('json-files-list');
+			
+			if (jsonFiles.length === 0) {
+				filesList.innerHTML = '<div style="color: #666; font-style: italic; text-align: center; padding: 10px;">No JSON files found in selected folder</div>';
+				return;
+			}
+
+			filesList.innerHTML = '';
+			jsonFiles.forEach((file, index) => {
+				const fileItem = document.createElement('div');
+				fileItem.className = 'file-item';
+				fileItem.style.cssText = `
+					padding: 8px;
+					cursor: pointer;
+					border-radius: 3px;
+					margin-bottom: 2px;
+					transition: background-color 0.2s;
+				`;
+				fileItem.innerHTML = `📄 ${file.name}`;
+				
+				// Add hover effect
+				fileItem.onmouseenter = () => fileItem.style.backgroundColor = '#444';
+				fileItem.onmouseleave = () => fileItem.style.backgroundColor = 'transparent';
+				
+				// Add click handler
+				fileItem.onclick = () => loadJsonFile(file);
+				
+				filesList.appendChild(fileItem);
+			});
+		}
+
+		async function loadJsonFile(fileInfo) {
+			try {
+				const file = await fileInfo.handle.getFile();
+				const text = await file.text();
+				const data = JSON.parse(text);
+				
+				// Ask user if they want to replace or merge the graph
+				const shouldReplace = confirm(`Do you want to replace the current graph with "${fileInfo.name}"?\n\nClick OK to replace the current graph.\nClick Cancel to keep your current work.`);
+				
+				if (shouldReplace) {
+					// Load the graph with replacement (this will clear the canvas)
+					graph.configure(data);
+					// alert(`File "${fileInfo.name}" loaded successfully!`);
+				} else {
+					// User chose to keep current work
+					alert(`Operation cancelled. Current graph was preserved.`);
+				}
+			} catch (err) {
+				console.error('Error loading file:', err);
+				alert(`Error loading file "${fileInfo.name}": ${err.message}`);
+			}
+		}
+
+		// Legacy function for compatibility
+		function loadFile(filename) {
+			// alert('Loading ' + filename + ' (legacy function - use Browse Local Folder for actual file loading)');
+		}
+
+		// Drag and drop for nodes
+		function dragNode(event, nodeType) {
+			event.dataTransfer.setData('text/plain', nodeType);
+		}
+
+		// Handle drop on canvas
+		document.getElementById('mycanvas').addEventListener('dragover', function(e) {
+			e.preventDefault();
+		});
+
+		document.getElementById('mycanvas').addEventListener('drop', function(e) {
+			e.preventDefault();
+			var nodeType = e.dataTransfer.getData('text/plain');
+			if (nodeType) {
+				var rect = e.target.getBoundingClientRect();
+				var x = e.clientX - rect.left;
+				var y = e.clientY - rect.top;
+				
+				// Convert screen coordinates to canvas coordinates
+				var canvasPos = canvas.convertEventToCanvasOffset(e);
+				
+				try {
+					// Check if it's a saved configurable node
+					if (nodeType.startsWith('saved-configurable-')) {
+						var index = parseInt(nodeType.replace('saved-configurable-', ''));
+						var savedNodes = JSON.parse(localStorage.getItem('savedConfigurableNodes') || '[]');
+						if (savedNodes[index]) {
+							var node = LiteGraph.createNode('PyG');
+							if (node) {
+								node.pos = [canvasPos[0], canvasPos[1]];
+								// Apply saved configuration
+								var config = savedNodes[index];
+								node.properties.input_count = config.input_count;
+								node.properties.output_count = config.output_count;
+								node.properties.selected_file = config.selected_file;
+								node.properties.folder_path = config.folder_path;
+								node.properties.class_name = config.class_name;
+								
+								// Update the node's title
+								node.title = config.name || 'PyG Node';
+								
+								// Recreate inputs/outputs first
+								node.updateInputsOutputs();
+								
+								// Create parameter widgets from saved key_value_pairs
+								if (config.key_value_pairs && Object.keys(config.key_value_pairs).length > 0) {
+									node.createParameterWidgets(config.key_value_pairs);
+								}
+								
+								// Update remaining widget values to reflect the loaded properties
+								if (node.widgets) {
+									for (let widget of node.widgets) {
+										if (widget.name === "Inputs") {
+											widget.value = config.input_count;
+										} else if (widget.name === "Outputs") {
+											widget.value = config.output_count;
+										} else if (widget.name === "File") {
+											widget.value = config.selected_file || "No file selected";
+										} else if (widget.name === "Folder Path") {
+											widget.value = config.folder_path || "";
+										} else if (widget.name === "Class Name") {
+											widget.value = config.class_name || "";
+										}
+									}
+								}
+								
+								graph.add(node);
+							}
+						}
+					} else if (nodeType.startsWith('analyzed-node-')) {
+					// Handle analyzed node creation
+					console.log('Creating analyzed node from drag and drop');
+					var index = parseInt(nodeType.replace('analyzed-node-', ''));
+					console.log('Analyzed node index:', index);
+					console.log('Available analyzed nodes:', analyzedNodes);
+					
+					if (analyzedNodes[index]) {
+						var nodeInfo = analyzedNodes[index];
+						console.log('Creating node from nodeInfo:', nodeInfo);
+						console.log('Parameters in nodeInfo:', nodeInfo.parameters);
+						
+						var node = LiteGraph.createNode('PyG');
+						if (node) {
+							node.pos = [canvasPos[0], canvasPos[1]];
+							console.log('Node created at position:', node.pos);
+							
+							// Configure the node with analyzed information
+							node.properties = node.properties || {};
+							node.properties.selected_file = nodeInfo.fileName;
+							node.properties.folder_path = nodeInfo.relativePath || nodeInfo.folderPath;
+							node.properties.class_name = nodeInfo.className;
+							
+							// Initialize key_value_pairs
+							node.properties.key_value_pairs = {};
+							
+							// Pre-populate key_value_pairs with parameters if available
+							if (nodeInfo.parameters) {
+								Object.entries(nodeInfo.parameters).forEach(([key, value]) => {
+									node.properties.key_value_pairs[key] = value;
+								});
+							}
+							
+							console.log('Node properties set:', node.properties);
+							
+							// Set default input/output counts (can be adjusted by user)
+							node.properties.input_count = 1;
+							node.properties.output_count = 1;
+							
+							// Update the node's title
+							node.title = nodeInfo.name;
+							
+							// Recreate inputs/outputs first
+							node.updateInputsOutputs();
+							
+							// Create parameter widgets based on analyzed attrNamesArr
+							console.log('Node info parameters before creating widgets:', nodeInfo.parameters);
+							
+							// Ensure parameters are properly formatted
+							if (nodeInfo.parameters) {
+								// Make a deep copy to avoid reference issues
+								const paramsCopy = JSON.parse(JSON.stringify(nodeInfo.parameters));
+								console.log('Parameters deep copy:', paramsCopy);
+								
+								// Convert string values to appropriate types
+								Object.entries(paramsCopy).forEach(([key, value]) => {
+									if (typeof value === 'string' && !isNaN(parseFloat(value))) {
+										paramsCopy[key] = parseFloat(value);
+										console.log(`Converted parameter ${key} from string to number: ${value} -> ${paramsCopy[key]}`);
+									}
+								});
+								
+								// Use the processed parameters
+								console.log('Processed parameters for widget creation:', paramsCopy);
+								node.createParameterWidgets(paramsCopy);
+							} else {
+								console.warn('No parameters found in nodeInfo');
+								node.createParameterWidgets({});
+							}
+							
+							console.log('After creating parameter widgets, node widgets:', node.widgets);
+							console.log('Node key_value_pairs after widget creation:', node.properties.key_value_pairs);
+							
+							// Update remaining widget values
+							if (node.widgets) {
+								for (let widget of node.widgets) {
+									if (widget.name === "File") {
+										widget.value = nodeInfo.fileName;
+									} else if (widget.name === "Folder Path") {
+										widget.value = nodeInfo.relativePath || nodeInfo.folderPath;
+									} else if (widget.name === "Class Name") {
+										widget.value = nodeInfo.className;
+									}
+								}
+								console.log('Final node widgets after updates:', node.widgets);
+							}
+							
+							graph.add(node);
+							console.log('Node added to graph');
+						}
+					} else {
+						console.error('No analyzed node found at index:', index);
+					}
+				} else {
+						// Regular node creation
+						var node = LiteGraph.createNode(nodeType);
+						if (node) {
+							node.pos = [canvasPos[0], canvasPos[1]];
+							graph.add(node);
+						}
+					}
+				} catch (err) {
+					console.error('Error creating node:', err);
+					alert('Error creating node: ' + nodeType);
+				}
+			}
+		});
+
+		// Store canvas reference globally for resize function
+		window.canvas = canvas;
+
+		// Code Analysis Functions
+		async function analyzeCodeFolder() {
+			try {
+				if ('showDirectoryPicker' in window) {
+					const folderHandle = await window.showDirectoryPicker();
+					await analyzePythonModules(folderHandle);
+				} else {
+					alert('Your browser does not support the File System Access API. Please use Chrome 86+ or Edge 86+.');
+				}
+			} catch (err) {
+				if (err.name !== 'AbortError') {
+					console.error('Error analyzing folder:', err);
+					alert('Error analyzing folder: ' + err.message);
+				}
+			}
+		}
+		
+		// Function to directly load the demo_wt_flows folder
+		
+		// DEBUG: Test function to manually test parameter extraction
+		function testParameterExtraction() {
+			console.log('=== TESTING PARAMETER EXTRACTION ===');
+			
+			// Test with a simple parameters object
+			const testParams = {
+				flow_rate: 100.0,
+				temperature: 25.0
+			};
+			
+			console.log('Test parameters:', testParams);
+			
+			// Create a test node
+			const testNode = LiteGraph.createNode('PyG');
+			if (testNode) {
+				console.log('Test node created successfully');
+				testNode.pos = [100, 100];
+				
+				// Test createParameterWidgets
+				console.log('Calling createParameterWidgets with test parameters...');
+				testNode.createParameterWidgets(testParams);
+				
+				console.log('Test node widgets after creation:', testNode.widgets ? testNode.widgets.map(w => w.name) : 'no widgets');
+				console.log('Test node key_value_pairs:', testNode.properties.key_value_pairs);
+				
+				// Add to graph
+				graph.add(testNode);
+				console.log('Test node added to graph');
+			} else {
+				console.error('Failed to create test node');
+			}
+		}
+		
+		// DEBUG: Function to test regex on both file types
+		function debugFileComparison() {
+			console.log('=== DEBUGGING FILE COMPARISON ===');
+			
+			// Test lines from both files
+			const testFileLine = '        self.attrNamesArr = ["flow_rate", "temperature"]';
+			const realFileLine = '        self.attrNamesArr = ["flow_rate", "pH", "TDS", "COD"]';
+			
+			console.log('Testing regex on test file line:', testFileLine);
+			const testMatch = testFileLine.trim().match(/self\.attrNamesArr\s*=\s*\[([^\]]+)\]/);
+			console.log('Test file match result:', testMatch);
+			
+			console.log('Testing regex on real file line:', realFileLine);
+			const realMatch = realFileLine.trim().match(/self\.attrNamesArr\s*=\s*\[([^\]]+)\]/);
+			console.log('Real file match result:', realMatch);
+			
+			if (testMatch) {
+				const testAttrs = testMatch[1].split(',').map(attr => attr.trim().replace(/["']/g, ''));
+				console.log('Test file parsed attributes:', testAttrs);
+			}
+			
+			if (realMatch) {
+				const realAttrs = realMatch[1].split(',').map(attr => attr.trim().replace(/["']/g, ''));
+				console.log('Real file parsed attributes:', realAttrs);
+			}
+			
+			// Test with real FlowSource content
+			console.log('\n=== TESTING WITH REAL FLOWSOURCE CONTENT ===');
+			const realFlowSourceContent = `from pyingraph import BlockBase
+
+class FlowSource(BlockBase):
+    """
+    A flow source block for water treatment systems that outputs polluted water parameters.
+    This represents the source node of polluted water in water-treatment industry.
+    
+    Output: Dictionary containing water parameters:
+    - flow_rate: Flow rate in m³/h
+    - pH: pH value
+    - TDS: Total Dissolved Solids in mg/L
+    - COD: Chemical Oxygen Demand in mg/L
+    """
+    
+    def __init__(self) -> None:
+        super().__init__()
+        # Define the parameter names that can be configured
+        self.attrNamesArr = ["flow_rate", "pH", "TDS", "COD"]
+        
+        # Default water parameters for polluted water
+        self.flow_rate = 100.0  # m³/h
+        self.pH = 6.5  # slightly acidic
+        self.TDS = 800.0  # mg/L (high TDS indicating pollution)
+        self.COD = 300.0  # mg/L (high COD indicating organic pollution)`;
+			
+			// Test line by line
+			const lines = realFlowSourceContent.split('\n');
+			console.log('Testing each line for attrNamesArr:');
+			
+			lines.forEach((line, index) => {
+				if (line.includes('attrNamesArr')) {
+					console.log(`Line ${index}: ${line}`);
+					const lineMatch = line.match(/self\.attrNamesArr\s*=\s*\[([^\]]+)\]/);
+					console.log('Match result:', lineMatch);
+					
+					if (lineMatch) {
+						console.log('Matched content:', lineMatch[1]);
+						const attrs = lineMatch[1].split(',').map(attr => attr.trim().replace(/["']/g, ''));
+						console.log('Parsed attributes:', attrs);
+					}
+				}
+			});
+			
+			// Test indentation handling
+			console.log('\nTesting indentation handling:');
+			lines.forEach((line, index) => {
+				if (line.trim().startsWith('def __init__')) {
+					console.log(`Found __init__ at line ${index}: ${line}`);
+					console.log(`Indentation: ${line.length - line.trimLeft().length} spaces`);
+				}
+				if (line.includes('attrNamesArr')) {
+					console.log(`Found attrNamesArr at line ${index}: ${line}`);
+					console.log(`Indentation: ${line.length - line.trimLeft().length} spaces`);
+				}
+			});
+			
+			// Test the full parsing process with debug output
+			console.log('\n=== TESTING FULL PARSING PROCESS ===');
+			const testContent = `class FlowSource(BlockBase):
+    def __init__(self):
+        super().__init__()
+        self.attrNamesArr = ["flow_rate", "pH", "TDS", "COD"]
+        self.flow_rate = 100.0`;
+			
+			console.log('Test content:\n', testContent);
+			const testLines = testContent.split('\n');
+			
+			// Find class definition
+			let classIndex = -1;
+			testLines.forEach((line, index) => {
+				if (line.trim().startsWith('class ')) {
+					console.log(`Found class definition at line ${index}: ${line}`);
+					classIndex = index;
+				}
+			});
+			
+			if (classIndex >= 0) {
+				console.log('Manually extracting parameters from class at index:', classIndex);
+				const params = extractClassParameters(testLines, classIndex);
+				console.log('Extracted parameters:', params);
+			}
+		}
+        
+        // DEBUG: Function to check what parameters are in analyzed nodes
+         function debugAnalyzedNodes() {
+             console.log('=== DEBUGGING ANALYZED NODES ===');
+             console.log('Total analyzed nodes:', analyzedNodes.length);
+             
+             analyzedNodes.forEach((nodeInfo, index) => {
+                 console.log(`Node ${index}: ${nodeInfo.name}`);
+                 console.log('  - File:', nodeInfo.fileName);
+                 console.log('  - Class:', nodeInfo.className);
+                 console.log('  - Parameters:', nodeInfo.parameters);
+                 console.log('  - Parameter count:', Object.keys(nodeInfo.parameters || {}).length);
+                 
+                 if (nodeInfo.name === 'FlowSource') {
+                     console.log('*** FLOWSOURCE NODE FOUND ***');
+                     console.log('FlowSource parameters:', JSON.stringify(nodeInfo.parameters, null, 2));
+                 }
+             });
+         }
+         
+         // DEBUG: Function to test parameter extraction on exact FlowSource content
+         function debugFlowSourceParsing() {
+             console.log('=== DEBUGGING FLOWSOURCE PARSING ===');
+             
+             // Using the exact content from the real FlowSource file
+             const flowSourceContent = `from pyingraph import BlockBase
+
+class FlowSource(BlockBase):
+    """
+    A flow source block for water treatment systems that outputs polluted water parameters.
+    This represents the source node of polluted water in water-treatment industry.
+    
+    Output: Dictionary containing water parameters:
+    - flow_rate: Flow rate in m³/h
+    - pH: pH value
+    - TDS: Total Dissolved Solids in mg/L
+    - COD: Chemical Oxygen Demand in mg/L
+    """
+    
+    def __init__(self) -> None:
+        super().__init__()
+        # Define the parameter names that can be configured
+        self.attrNamesArr = ["flow_rate", "pH", "TDS", "COD"]
+        
+        # Default water parameters for polluted water
+        self.flow_rate = 100.0  # m³/h
+        self.pH = 6.5  # slightly acidic
+        self.TDS = 800.0  # mg/L (high TDS indicating pollution)
+        self.COD = 300.0  # mg/L (high COD indicating organic pollution)`;
+        
+             console.log('Testing parameter extraction on FlowSource content...');
+             const classes = parsePythonClasses(flowSourceContent, 'debug_flowsource.py');
+             console.log('Parsed classes:', classes);
+             
+             if (classes.length > 0) {
+                 const flowSourceClass = classes.find(c => c.name === 'FlowSource');
+                 if (flowSourceClass) {
+                     console.log('FlowSource class found!');
+                     console.log('Parameters:', flowSourceClass.parameters);
+                     console.log('Parameter count:', Object.keys(flowSourceClass.parameters || {}).length);
+                 } else {
+                     console.log('FlowSource class not found in parsed classes');
+                 }
+             } else {
+                 console.log('No classes parsed from content');
+             }
+             
+             // Also test with a simplified version to isolate any issues
+             console.log('\n=== TESTING WITH SIMPLIFIED FLOWSOURCE ===');
+             const simplifiedContent = `class FlowSource(BlockBase):
+    def __init__(self):
+        self.attrNamesArr = ["flow_rate", "pH", "TDS", "COD"]
+        self.flow_rate = 100.0`;
+             
+             const simplifiedClasses = parsePythonClasses(simplifiedContent, 'simplified.py');
+             if (simplifiedClasses.length > 0) {
+                 const simplifiedClass = simplifiedClasses[0];
+                 console.log('Simplified class parameters:', simplifiedClass.parameters);
+                 console.log('Parameter count:', Object.keys(simplifiedClass.parameters || {}).length);
+             }
+         }
+
+        // Add test button to the interface
+		window.addEventListener('load', function() {
+			setTimeout(() => {
+				// TEST PARAMS button removed
+console.log('TEST PARAMS button has been removed');
+				
+				// Debug buttons removed
+console.log('Debug buttons have been removed');
+			}, 1000);
+		});
+
+
+		async function analyzePythonModules(folderHandle) {
+			try {
+				analyzedNodes = [];
+				const container = document.getElementById('analyzed-nodes-container');
+				container.innerHTML = '<div style="color: #666; text-align: center; padding: 10px;">Analyzing Python modules...</div>';
+
+				// Get folder path for relative path calculation
+				const folderPath = folderHandle.name;
+
+				// Recursively analyze all Python files
+				await analyzeFolder(folderHandle, folderPath, '');
+
+				// Update UI with found nodes
+				updateAnalyzedNodesUI();
+			} catch (err) {
+				console.error('Error analyzing Python modules:', err);
+				alert('Error analyzing Python modules: ' + err.message);
+			}
+		}
+
+		async function analyzeFolder(folderHandle, baseFolderPath, relativePath) {
+			console.log('Analyzing folder:', baseFolderPath, 'with relative path:', relativePath);
+			for await (const [name, handle] of folderHandle.entries()) {
+				if (handle.kind === 'file' && name.endsWith('.py')) {
+					console.log('Found Python file:', name, 'in path:', relativePath);
+					await analyzePythonFile(handle, name, baseFolderPath, relativePath);
+				} else if (handle.kind === 'directory') {
+					// Recursively analyze subdirectories
+					const newRelativePath = relativePath ? `${relativePath}/${name}` : name;
+					console.log('Found subdirectory:', name, 'new relative path:', newRelativePath);
+					await analyzeFolder(handle, baseFolderPath, newRelativePath);
+				}
+			}
+		}
+
+		async function analyzePythonFile(fileHandle, fileName, baseFolderPath, relativePath) {
+			try {
+				console.log(`Analyzing Python file: ${fileName} in ${relativePath}`);
+				const file = await fileHandle.getFile();
+				const content = await file.text();
+				
+				// Parse Python file to find BlockBase classes
+				const classes = parsePythonClasses(content, fileName);
+				console.log(`Found ${classes.length} classes in ${fileName}:`, classes.map(c => c.name));
+				
+				classes.forEach(classInfo => {
+					console.log(`Processing class ${classInfo.name}, inherits from BlockBase: ${classInfo.inheritsFromBlockBase}`);
+					console.log(`Parameters for ${classInfo.name}:`, classInfo.parameters);
+					
+					const nodeInfo = {
+						name: classInfo.name,
+						fileName: fileName,
+						folderPath: baseFolderPath,
+						relativePath: relativePath,
+						className: classInfo.name,
+						docstring: classInfo.docstring,
+						parameters: classInfo.parameters,
+						inheritsFromBlockBase: classInfo.inheritsFromBlockBase
+					};
+					
+					if (classInfo.inheritsFromBlockBase) {
+						console.log(`Adding ${classInfo.name} to analyzed nodes with parameters:`, classInfo.parameters);
+						analyzedNodes.push(nodeInfo);
+					}
+				});
+			} catch (err) {
+				console.error(`Error analyzing file ${fileName}:`, err);
+			}
+		}
+
+		function parsePythonClasses(content, fileName) {
+			const classes = [];
+			const lines = content.split('\n');
+			console.log(`Parsing Python classes from ${fileName} with ${lines.length} lines`);
+			
+			for (let i = 0; i < lines.length; i++) {
+				const line = lines[i];
+				const trimmedLine = line.trim();
+				
+				// Look for class definitions
+				const classMatch = trimmedLine.match(/^class\s+(\w+)\s*\(([^)]+)\)\s*:/);
+				if (classMatch) {
+					const className = classMatch[1];
+					const inheritance = classMatch[2];
+					console.log(`Found class definition at line ${i}: ${className} inherits from ${inheritance}`);
+					
+					// Check if it inherits from BlockBase
+					const inheritsFromBlockBase = inheritance.includes('BlockBase');
+					console.log(`Class ${className} inherits from BlockBase: ${inheritsFromBlockBase}`);
+					
+					// Extract docstring
+					let docstring = '';
+					let j = i + 1;
+					while (j < lines.length && lines[j].trim() === '') j++; // Skip empty lines
+					
+					if (j < lines.length) {
+						const nextLine = lines[j].trim();
+						if (nextLine.startsWith('"""') || nextLine.startsWith("'''")) {
+							console.log(`Found docstring at line ${j}`);
+							// Multi-line docstring
+							const quote = nextLine.substring(0, 3);
+							let docLines = [];
+							
+							if (nextLine.length > 3 && nextLine.endsWith(quote)) {
+								// Single line docstring
+								docstring = nextLine.substring(3, nextLine.length - 3);
+							} else {
+								// Multi-line docstring
+								docLines.push(nextLine.substring(3));
+								j++;
+								while (j < lines.length && !lines[j].includes(quote)) {
+									docLines.push(lines[j]);
+									j++;
+								}
+								if (j < lines.length) {
+									const lastLine = lines[j];
+									const endIndex = lastLine.indexOf(quote);
+									if (endIndex !== -1) {
+										docLines.push(lastLine.substring(0, endIndex));
+									}
+								}
+								docstring = docLines.join('\n').trim();
+							}
+						}
+					}
+					
+					console.log(`Extracting parameters for class ${className} at line ${i}`);
+					// Extract parameters from __init__ method
+					const parameters = extractClassParameters(lines, i);
+					console.log(`Extracted parameters for ${className}:`, parameters);
+					
+					classes.push({
+						name: className,
+						inheritsFromBlockBase: inheritsFromBlockBase,
+						docstring: docstring,
+						parameters: parameters
+					});
+					console.log(`Added class ${className} to parsed classes`);
+				}
+			}
+			
+			console.log(`Finished parsing ${classes.length} classes from ${fileName}`);
+			return classes;
+		}
+
+		function extractClassParameters(lines, classStartIndex) {
+			const parameters = {};
+			console.log('Extracting parameters from class starting at line:', classStartIndex);
+			
+			// Check if this is the FlowSource class
+			let isFlowSource = false;
+			const classLine = lines[classStartIndex];
+			if (classLine.includes('FlowSource')) {
+				isFlowSource = true;
+				console.log('*** This is a FlowSource class ***');
+			}
+			
+			// Determine the indentation level of the class definition
+			const classIndent = classLine.length - classLine.trimLeft().length;
+			console.log('Class indentation level:', classIndent);
+			
+			// Look for __init__ method
+			let initMethodFound = false;
+			let initMethodIndent = -1;
+			let initMethodLine = -1;
+			
+			// First pass: scan for attrNamesArr in the entire class
+			for (let i = classStartIndex + 1; i < lines.length; i++) {
+				const line = lines[i];
+				const trimmedLine = line.trim();
+				const lineIndent = line.length - line.trimLeft().length;
+				
+				// Stop if we hit another class or function at the same or lower indentation level
+				if ((trimmedLine.startsWith('class ') || (trimmedLine.startsWith('def ') && !trimmedLine.includes('__init__'))) && lineIndent <= classIndent) {
+					console.log('Stopping parameter search: found another class/function at same level at line', i);
+					break;
+				}
+				
+				// Direct scan for attrNamesArr anywhere in the class
+				if (trimmedLine.includes('attrNamesArr')) {
+					console.log('Found attrNamesArr directly at line:', i);
+					console.log('Line content:', trimmedLine);
+					
+					// Try different regex patterns to match the array
+					let attrMatch = trimmedLine.match(/self\.attrNamesArr\s*=\s*\[([^\]]+)\]/);
+					if (!attrMatch) {
+						// Try a more flexible pattern
+						attrMatch = trimmedLine.match(/attrNamesArr\s*=\s*\[([^\]]+)\]/);
+					}
+					
+					console.log('Regex match result:', attrMatch);
+					
+					if (attrMatch) {
+						console.log('Found attrNamesArr content:', attrMatch[1]);
+						const attrs = attrMatch[1].split(',').map(attr => {
+							const trimmed = attr.trim();
+							// Remove quotes (both single and double)
+							return trimmed.replace(/["']/g, '');
+						}).filter(attr => attr !== '');
+						
+						console.log('Parsed attributes:', attrs);
+						
+						// Add each attribute as a parameter
+						attrs.forEach(attr => {
+							if (attr) {
+								console.log('Processing attribute:', attr);
+								parameters[attr] = 0; // Default value
+							}
+						});
+					}
+				}
+				
+				// Look for __init__ method
+				if (trimmedLine.includes('def __init__')) {
+					console.log('Found __init__ method at line:', i, 'with indent:', lineIndent);
+					initMethodFound = true;
+					initMethodIndent = lineIndent;
+					initMethodLine = i;
+				}
+			}
+			
+			// Second pass: look for parameter assignments in __init__ if found, but ONLY for parameters in attrNamesArr
+			// This is to get default values for parameters defined in attrNamesArr
+			if (initMethodFound && Object.keys(parameters).length > 0) {
+				console.log('Processing __init__ method content for default values of attrNamesArr parameters only...');
+				
+				for (let j = initMethodLine + 1; j < lines.length; j++) {
+					const initLine = lines[j];
+					const trimmedInitLine = initLine.trim();
+					const initLineIndent = initLine.length - initLine.trimLeft().length;
+					
+					// Only process lines with greater indentation than the __init__ method
+					if (initLineIndent <= initMethodIndent && trimmedInitLine !== '') {
+						console.log('Stopping init method parsing: found line with same/lower indent at line:', j);
+						break;
+					}
+					
+					// Debug each line in __init__ method
+					console.log(`Line ${j} (indent ${initLineIndent}):`, trimmedInitLine);
+					
+					// Look for parameter assignments, but ONLY for parameters already in attrNamesArr
+					const paramMatch = trimmedInitLine.match(/self\.(\w+)\s*=\s*(.+)/);
+					if (paramMatch && parameters.hasOwnProperty(paramMatch[1])) {
+						const paramName = paramMatch[1];
+						const paramValue = paramMatch[2].split('#')[0].trim(); // Remove comments
+						console.log(`Found default value for attrNamesArr parameter: ${paramName} = ${paramValue}`);
+						
+						// Try to parse the default value
+						let defaultValue = 0;
+						if (paramValue.includes('"') || paramValue.includes("'")) {
+							defaultValue = paramValue.replace(/["']/g, '');
+						} else if (!isNaN(parseFloat(paramValue))) {
+							defaultValue = parseFloat(paramValue);
+						}
+						
+						parameters[paramName] = defaultValue;
+					}
+				}
+			}
+			
+			// Special case for FlowSource - if we still don't have parameters
+			if (isFlowSource && Object.keys(parameters).length === 0) {
+				console.log('FlowSource detected but no parameters found. Adding hardcoded parameters.');
+				['flow_rate', 'pH', 'TDS', 'COD'].forEach(param => {
+					parameters[param] = 0;
+				});
+			}
+			
+			console.log('Final parameters:', parameters);
+			return parameters;
+		}
+
+		function updateAnalyzedNodesUI() {
+			const container = document.getElementById('analyzed-nodes-container');
+			
+			if (analyzedNodes.length === 0) {
+				container.innerHTML = '<div style="color: #666; font-style: italic; text-align: center; padding: 10px;">No BlockBase classes found</div>';
+				return;
+			}
+			
+			container.innerHTML = '<div style="color: #4CAF50; font-weight: bold; text-align: center; padding: 5px; border-bottom: 1px solid #444; margin-bottom: 5px;">📦 Analyzed Modules</div>';
+			
+			analyzedNodes.forEach((nodeInfo, index) => {
+				const nodeItem = document.createElement('div');
+				nodeItem.className = 'node-item';
+				nodeItem.draggable = true;
+				nodeItem.style.backgroundColor = '#2E7D32';
+				nodeItem.style.border = '1px solid #4CAF50';
+				nodeItem.style.marginBottom = '3px';
+				
+				// Create display text
+				const displayText = `📦 ${nodeInfo.name}`;
+				const tooltip = `File: ${nodeInfo.fileName}\nClass: ${nodeInfo.className}\nPath: ${nodeInfo.relativePath || 'root'}`;
+				
+				nodeItem.innerHTML = displayText;
+				nodeItem.title = tooltip;
+				
+				// Add drag functionality
+				nodeItem.ondragstart = function(event) {
+					event.dataTransfer.setData('text/plain', `analyzed-node-${index}`);
+				};
+				
+				container.appendChild(nodeItem);
+			});
+		}
+
+		// Saved nodes management
+		function loadSavedNodes() {
+			try {
+				const savedNodes = JSON.parse(localStorage.getItem('savedConfigurableNodes') || '[]');
+				updateSavedNodesPanel(savedNodes);
+			} catch (err) {
+				console.error('Error loading saved nodes:', err);
+			}
+		}
+
+		function saveSavedNodes(nodes) {
+			try {
+				localStorage.setItem('savedConfigurableNodes', JSON.stringify(nodes));
+			} catch (err) {
+				console.error('Error saving nodes:', err);
+				alert('Error saving node: ' + err.message);
+			}
+		}
+
+		function updateSavedNodesPanel(savedNodes) {
+			const panel = document.getElementById('saved-nodes');
+			// Preserve the buttons at the top
+			const buttonsDiv = `<div style="margin-bottom: 10px; display: flex; gap: 5px;">
+				<button onclick="exportSavedNodes()" style="flex: 1; padding: 4px; background: #484a48; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">📤 Save Loaded Nodes as JSON</button>
+				<button onclick="importSavedNodes()" style="flex: 1; padding: 4px; background: #484a48; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">📥 Load Nodes from JSON</button>
+			</div>
+			<div style="margin-bottom: 10px;">
+				<button onclick="clearSavedNodes()" style="width: 100%; padding: 8px; background: #591703; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️ Clear Loaded Nodes </button>
+			</div>`;
+			
+			panel.innerHTML = buttonsDiv;
+			
+			if (savedNodes.length === 0) {
+				panel.innerHTML += '<div style="color: #666; font-style: italic; text-align: center; padding: 10px;">No saved nodes</div>';
+				return;
+			}
+			
+			savedNodes.forEach((nodeConfig, index) => {
+				const nodeItem = document.createElement('div');
+				nodeItem.className = 'node-item';
+				nodeItem.style.position = 'relative';
+				nodeItem.draggable = true;
+				
+				// Create display name
+				const displayName = nodeConfig.name || 
+					(nodeConfig.class_name ? `${nodeConfig.class_name}` : `Node ${index + 1}`);
+				
+				nodeItem.innerHTML = `
+					<div style="display: flex; justify-content: space-between; align-items: center;">
+						<span>${displayName}</span>
+						<button onclick="deleteSavedNode(${index})" style="background: #d32f2f; border: none; color: white; padding: 2px 6px; border-radius: 2px; cursor: pointer; font-size: 10px;">×</button>
+					</div>
+					<div style="font-size: 10px; color: #888; margin-top: 2px;">
+						I:${nodeConfig.input_count} O:${nodeConfig.output_count}
+						${nodeConfig.folder_path ? ` | ${nodeConfig.folder_path}` : ''}
+					</div>
+				`;
+				
+				// Add drag functionality
+				nodeItem.ondragstart = function(e) {
+					e.dataTransfer.setData('text/plain', 'saved-configurable-' + index);
+				};
+				
+				panel.appendChild(nodeItem);
+			});
+		}
+
+		function deleteSavedNode(index) {
+			if (confirm('Delete this saved node?')) {
+				const savedNodes = JSON.parse(localStorage.getItem('savedConfigurableNodes') || '[]');
+				savedNodes.splice(index, 1);
+				saveSavedNodes(savedNodes);
+				updateSavedNodesPanel(savedNodes);
+			}
+		}
+
+		// Initialize panel visibility and load saved nodes on page load
+		function initializePanels() {
+			// Ensure all panels are visible by default
+			const panels = ['file-explorer', 'nodes-list', 'saved-nodes'];
+			panels.forEach(panelId => {
+				const panel = document.getElementById(panelId);
+				if (panel) {
+					// Force panel to be visible
+					panel.style.display = 'block';
+					panel.style.visibility = 'visible';
+					panel.style.opacity = '1';
+					panel.style.height = 'auto';
+					panel.style.overflow = 'visible';
+					
+					// Extra emphasis for saved-nodes panel
+					if (panelId === 'saved-nodes') {
+						console.log('Initializing saved-nodes panel with forced visibility');
+						panel.style.display = 'block !important';
+						panel.setAttribute('data-force-visible', 'true');
+						
+						// Force all child elements to be visible too
+						const buttons = panel.querySelectorAll('button');
+						buttons.forEach(button => {
+							button.style.display = 'block';
+							button.style.visibility = 'visible';
+							button.style.opacity = '1';
+						});
+					}
+				}
+			});
+		}
+		
+		// Initialize panels and load saved nodes
+		function initializeApp() {
+			initializePanels();
+			loadSavedNodes();
+		}
+		
+		// Initialize when DOM is ready
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', function() {
+				initializeApp();
+				// Force saved-nodes panel to be visible after a short delay
+				setTimeout(function() {
+					var savedNodesPanel = document.getElementById('saved-nodes');
+					if (savedNodesPanel) {
+						console.log('Forcing saved-nodes panel visibility after delay');
+						savedNodesPanel.style.display = 'block';
+						savedNodesPanel.style.visibility = 'visible';
+						savedNodesPanel.style.opacity = '1';
+						
+						// Force all buttons to be visible
+						var buttons = savedNodesPanel.querySelectorAll('button');
+						buttons.forEach(function(button) {
+							button.style.display = 'block';
+							button.style.visibility = 'visible';
+							button.style.opacity = '1';
+						});
+					}
+				}, 500);
+			});
+		} else {
+			initializeApp();
+			// Force saved-nodes panel to be visible after a short delay
+			setTimeout(function() {
+				var savedNodesPanel = document.getElementById('saved-nodes');
+				if (savedNodesPanel) {
+					console.log('Forcing saved-nodes panel visibility after delay');
+					savedNodesPanel.style.display = 'block';
+					savedNodesPanel.style.visibility = 'visible';
+					savedNodesPanel.style.opacity = '1';
+					
+					// Force all buttons to be visible
+					var buttons = savedNodesPanel.querySelectorAll('button');
+					buttons.forEach(function(button) {
+						button.style.display = 'block';
+						button.style.visibility = 'visible';
+						button.style.opacity = '1';
+					});
+				}
+			}, 500);
+		}
+
+		// Export saved nodes to JSON file
+		function exportSavedNodes() {
+			try {
+				const savedNodes = JSON.parse(localStorage.getItem('savedConfigurableNodes') || '[]');
+				
+				if (savedNodes.length === 0) {
+					alert('No saved nodes to export.');
+					return;
+				}
+				
+				const exportData = {
+					version: "1.0",
+					exported_at: new Date().toISOString(),
+					nodes: savedNodes
+				};
+				
+				const data = JSON.stringify(exportData, null, 2);
+				const blob = new Blob([data], {type: 'application/json'});
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = 'saved_nodes_' + new Date().toISOString().split('T')[0] + '.json';
+				a.click();
+				URL.revokeObjectURL(url);
+				
+				// alert(`Exported ${savedNodes.length} saved nodes successfully!`);
+			} catch (err) {
+				console.error('Error exporting saved nodes:', err);
+				alert('Error exporting saved nodes: ' + err.message);
+			}
+		}
+		
+		// Import saved nodes from JSON file
+		function importSavedNodes() {
+			const input = document.createElement('input');
+			input.type = 'file';
+			input.accept = '.json';
+			input.onchange = function(e) {
+				const file = e.target.files[0];
+				if (file) {
+					const reader = new FileReader();
+					reader.onload = function(e) {
+						try {
+							const importData = JSON.parse(e.target.result);
+							
+							// Validate import data structure
+							if (!importData.nodes || !Array.isArray(importData.nodes)) {
+								alert('Invalid file format. Expected a JSON file with saved nodes.');
+								return;
+							}
+							
+							const currentNodes = JSON.parse(localStorage.getItem('savedConfigurableNodes') || '[]');
+							const importedNodes = importData.nodes;
+							
+							// Ask user how to handle the import
+							const action = confirm(
+								`Found ${importedNodes.length} nodes to import.\n\n` +
+								`Click OK to MERGE with existing nodes (${currentNodes.length} current).\n` +
+								`Click Cancel to REPLACE all existing nodes.`
+							);
+							
+							let finalNodes;
+							if (action) {
+								// Merge: add imported nodes to existing ones
+								finalNodes = [...currentNodes, ...importedNodes];
+							} else {
+								// Replace: use only imported nodes
+								finalNodes = importedNodes;
+							}
+							
+							// Save and update UI
+							saveSavedNodes(finalNodes);
+							updateSavedNodesPanel(finalNodes);
+							
+							// alert(`Successfully imported ${importedNodes.length} nodes! Total nodes: ${finalNodes.length}`);
+							
+						} catch (err) {
+							console.error('Error importing saved nodes:', err);
+							alert('Error importing file: ' + err.message);
+						}
+					};
+					reader.readAsText(file);
+				}
+			};
+			input.click();
+		}
+		
+		// Clear all saved nodes
+		function clearSavedNodes() {
+			if (confirm('Are you sure you want to clear all saved nodes? This action cannot be undone.')) {
+				localStorage.removeItem('savedConfigurableNodes');
+				updateSavedNodesPanel([]);
+				// alert('All saved nodes have been cleared.');
+			}
+		}
+
+		// Make functions globally accessible
+		window.deleteSavedNode = deleteSavedNode;
+		window.saveSavedNodes = saveSavedNodes;
+		window.updateSavedNodesPanel = updateSavedNodesPanel;
+		window.exportSavedNodes = exportSavedNodes;
+		window.importSavedNodes = importSavedNodes;
+		window.clearSavedNodes = clearSavedNodes;
+
+		// Custom Configurable Node
+		function ConfigurableNode() {
+			this.title = "PyG Node";
+			this.size = [300, 200];
+			this.properties = {
+				input_count: 1,
+				output_count: 1,
+				selected_file: "",
+				folder_path: "",
+				class_name: "",
+				key_value_pairs: {}
+			};
+
+			// Initialize with default inputs/outputs
+			this.updateInputsOutputs();
+
+			// Add widgets
+			this.addWidget("number", "Inputs", this.properties.input_count, (value) => {
+				// Ensure integer values only
+				const intValue = Math.max(0, Math.round(value));
+				this.properties.input_count = intValue;
+				this.updateInputsOutputs();
+				return intValue; // Return the corrected value to update the widget
+			}, { min: 0, max: 10, step: 1, precision: 0 });
+
+			this.addWidget("number", "Outputs", this.properties.output_count, (value) => {
+				// Ensure integer values only
+				const intValue = Math.max(0, Math.round(value));
+				this.properties.output_count = intValue;
+				this.updateInputsOutputs();
+				return intValue; // Return the corrected value to update the widget
+			}, { min: 0, max: 10, step: 1, precision: 0 });
+
+			// Add folder path field (above file selection)
+			this.addWidget("text", "Folder Path", this.properties.folder_path, (value) => {
+				this.properties.folder_path = value || "";
+			});
+
+			// File selection button that opens a real file dialog
+			this.addWidget("button", "Select File", null, () => {
+				this.openFileDialog();
+			});
+			
+			// Display selected file path
+			this.addWidget("text", "File", this.properties.selected_file || "No file selected", null, { readonly: true });
+
+			// Add class name field (below file field)
+			this.addWidget("text", "Class Name", this.properties.class_name, (value) => {
+				this.properties.class_name = value || "";
+			});
+
+			// Parameter widgets will be added dynamically based on analyzed modules
+			this.parameter_widgets = []; // Track parameter widgets separately
+
+			// Add save node button
+			this.addWidget("button", "Save Node", null, () => {
+				this.saveNodeConfiguration();
+			});
+		}
+
+		ConfigurableNode.prototype.openFileDialog = function() {
+			// Create a hidden file input element
+			const fileInput = document.createElement('input');
+			fileInput.type = 'file';
+			fileInput.accept = '.json,.txt,.csv,.xml,.js,.html,.css'; // Accept common file types
+			fileInput.style.display = 'none';
+			
+			// Handle file selection
+			fileInput.onchange = (event) => {
+				const file = event.target.files[0];
+				if (file) {
+					// Store only the file name
+					this.properties.selected_file = file.name;
+					
+					// Update the file path widget to show selected file
+					if (this.widgets) {
+						for (let widget of this.widgets) {
+							if (widget.name === "File") {
+								widget.value = file.name;
+								break;
+							}
+						}
+					}
+					
+					this.setDirtyCanvas(true, true);
+					console.log('File selected:', file.name)
+				}
+				// Clean up
+				document.body.removeChild(fileInput);
+			};
+			
+			// Add to DOM and trigger click
+			document.body.appendChild(fileInput);
+			fileInput.click();
+}
+		ConfigurableNode.prototype.openFileDialog = function() {
+			// Create a hidden file input element
+			const fileInput = document.createElement('input');
+			fileInput.type = 'file';
+			fileInput.accept = '.json,.txt,.csv,.xml,.js,.html,.css'; // Accept common file types
+			fileInput.style.display = 'none';
+			
+			// Handle file selection
+			fileInput.onchange = (event) => {
+				const file = event.target.files[0];
+				if (file) {
+					// Store only the file name
+					this.properties.selected_file = file.name;
+					
+					// Update the file path widget to show selected file
+					if (this.widgets) {
+						for (let widget of this.widgets) {
+							if (widget.name === "File") {
+								widget.value = file.name;
+								break;
+							}
+						}
+					}
+					
+					this.setDirtyCanvas(true, true);
+					console.log('File selected:', file.name)
+				}
+				// Clean up
+				document.body.removeChild(fileInput);
+			};
+			
+			// Add to DOM and trigger click
+			document.body.appendChild(fileInput);
+			fileInput.click();
+		};
+
+		ConfigurableNode.prototype.saveNodeConfiguration = function() {
+			// Validate that the node has meaningful configuration
+			if (!this.properties.class_name && !this.properties.folder_path && !this.properties.selected_file) {
+				alert('Please configure at least one field (Class Name, Folder Path, or File) before saving.');
+				return;
+			}
+
+			// Prompt for a name
+			const name = prompt('Enter a name for this saved node:', this.properties.class_name || 'My Node');
+			if (!name) return;
+
+			// Create configuration object
+			const nodeConfig = {
+				name: name,
+				input_count: this.properties.input_count,
+				output_count: this.properties.output_count,
+				selected_file: this.properties.selected_file,
+				folder_path: this.properties.folder_path,
+				class_name: this.properties.class_name,
+				key_value_pairs: JSON.parse(JSON.stringify(this.properties.key_value_pairs)), // Deep copy
+				saved_at: new Date().toISOString()
+			};
+
+			// Load existing saved nodes
+			const savedNodes = JSON.parse(localStorage.getItem('savedConfigurableNodes') || '[]');
+			
+			// Add new configuration
+			savedNodes.push(nodeConfig);
+			
+			// Save to localStorage
+			saveSavedNodes(savedNodes);
+			updateSavedNodesPanel(savedNodes);
+			
+			// alert(`Node "${name}" saved successfully!`);
+		};
+
+		ConfigurableNode.prototype.updateInputsOutputs = function() {
+			// Initialize arrays if they don't exist
+			if (!this.inputs) this.inputs = [];
+			if (!this.outputs) this.outputs = [];
+			if (!this.widgets) this.widgets = [];
+
+			// Clear existing inputs and outputs
+			while (this.inputs.length > 0) {
+				this.removeInput(0);
+			}
+			while (this.outputs.length > 0) {
+				this.removeOutput(0);
+			}
+
+			// Add inputs
+			for (let i = 0; i < this.properties.input_count; i++) {
+				this.addInput(`Input ${i + 1}`, "*");
+			}
+
+			// Add outputs
+			for (let i = 0; i < this.properties.output_count; i++) {
+				this.addOutput(`Output ${i + 1}`, "*");
+			}
+
+			// Resize node based on content
+			this.size[1] = Math.max(200, 80 + Math.max(this.properties.input_count, this.properties.output_count) * 20 + this.widgets.length * 25);
+			if (this.setDirtyCanvas) {
+				this.setDirtyCanvas(true, true);
+			}
+		};
+
+		// New method to create parameter widgets based on attrNamesArr
+		ConfigurableNode.prototype.createParameterWidgets = function(parameters) {
+			console.log('Creating parameter widgets with parameters:', parameters);
+			console.log('Parameters type:', typeof parameters);
+			console.log('Is parameters array?', Array.isArray(parameters));
+			console.log('Parameters constructor:', parameters ? parameters.constructor.name : 'null');
+			
+			// Remove existing parameter widgets
+			if (this.parameter_widgets) {
+				console.log('Removing existing parameter widgets:', this.parameter_widgets.length);
+				this.parameter_widgets.forEach(widget => {
+					const index = this.widgets.indexOf(widget);
+					if (index !== -1) {
+						this.widgets.splice(index, 1);
+					}
+				});
+			}
+			this.parameter_widgets = [];
+
+			// Create widgets for each parameter
+			if (parameters && typeof parameters === 'object') {
+				console.log('Parameters object keys:', Object.keys(parameters));
+				console.log('Parameters stringified:', JSON.stringify(parameters));
+				
+				Object.entries(parameters).forEach(([paramName, defaultValue]) => {
+					console.log(`Creating widget for parameter: ${paramName} = ${defaultValue}`);
+					console.log(`Parameter value type: ${typeof defaultValue}`);
+					
+					// Always use text widget type for all parameters
+					const widgetType = 'text';
+					let widgetValue;
+					
+					// Convert all types to string representation
+					if (typeof defaultValue === 'object' && defaultValue !== null) {
+						// For arrays and objects, use JSON string representation
+						widgetValue = JSON.stringify(defaultValue);
+					} else {
+						// For primitive types, convert to string
+						widgetValue = String(defaultValue);
+					}
+					
+					console.log(`Widget type: ${widgetType}, value: ${widgetValue}`);
+
+					// Create the widget
+					try {
+						const widget = this.addWidget(widgetType, paramName, widgetValue, (value) => {
+							// Update the key_value_pairs when parameter changes
+							if (!this.properties.key_value_pairs) {
+								this.properties.key_value_pairs = {};
+							}
+							
+							// Try to parse the value if it looks like JSON
+							let parsedValue = value;
+							if ((value.startsWith('[') && value.endsWith(']')) || 
+								(value.startsWith('{') && value.endsWith('}'))) {
+								try {
+									parsedValue = JSON.parse(value);
+									console.log(`Parsed JSON value for ${paramName}:`, parsedValue);
+								} catch (e) {
+									console.warn(`Failed to parse ${value} as JSON, using as string`);
+								}
+							} else if (!isNaN(Number(value)) && value.trim() !== '') {
+								// Try to parse as number if it looks like a number
+								parsedValue = Number(value);
+								console.log(`Parsed numeric value for ${paramName}:`, parsedValue);
+							}
+							
+							this.properties.key_value_pairs[paramName] = parsedValue;
+							console.log(`Widget value updated: ${paramName} = ${parsedValue}`);
+							return value; // Return original string for display
+						});
+
+						console.log('Widget created:', widget);
+						
+						// Add tooltip to help with input format
+						if (widget.options) {
+							widget.options.tooltip = getTooltipForParameter(paramName, defaultValue);
+						}
+						
+						// Store reference to parameter widget
+						this.parameter_widgets.push(widget);
+						
+						// Initialize the key_value_pairs with the parameter
+						if (!this.properties.key_value_pairs) {
+							this.properties.key_value_pairs = {};
+						}
+						
+						// Store the original value (not the string representation)
+						this.properties.key_value_pairs[paramName] = defaultValue;
+						console.log(`Added to key_value_pairs: ${paramName} = ${defaultValue}`);
+					} catch (error) {
+						console.error(`Error creating widget for ${paramName}:`, error);
+					}
+				});
+				
+				console.log('Final key_value_pairs:', this.properties.key_value_pairs);
+			} else {
+				console.log('No parameters provided or invalid parameters object');
+			}
+
+			// Update node size to accommodate new widgets
+			this.size[1] = Math.max(200, 80 + Math.max(this.properties.input_count, this.properties.output_count) * 20 + this.widgets.length * 25);
+			if (this.setDirtyCanvas) {
+				this.setDirtyCanvas(true, true);
+			}
+		};
+		
+		// Helper function to generate tooltips based on parameter type
+		function getTooltipForParameter(paramName, defaultValue) {
+			let tooltip = `Parameter: ${paramName}`;
+			
+			if (Array.isArray(defaultValue)) {
+				tooltip += '\nExpected format: Array [value1, value2, ...]';
+				tooltip += `\nExample: ${JSON.stringify(defaultValue)}`;
+			} else if (typeof defaultValue === 'object' && defaultValue !== null) {
+				tooltip += '\nExpected format: Object {key1: value1, key2: value2, ...}';
+				tooltip += `\nExample: ${JSON.stringify(defaultValue)}`;
+			} else if (typeof defaultValue === 'number') {
+				tooltip += '\nExpected format: Number';
+				tooltip += `\nExample: ${defaultValue}`;
+			} else if (typeof defaultValue === 'boolean') {
+				tooltip += '\nExpected format: Boolean (true or false)';
+			} else {
+				tooltip += '\nExpected format: String';
+			}
+			
+			return tooltip;
+		}
+
+		ConfigurableNode.prototype.showKeyValueDialog = function() {
+			const dialog = document.createElement('div');
+			dialog.style.cssText = `
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				background: #2d2d2d;
+				border: 2px solid #555;
+				border-radius: 8px;
+				padding: 20px;
+				min-width: 400px;
+				max-height: 500px;
+				overflow-y: auto;
+				z-index: 1000;
+				color: #fff;
+				font-family: Arial, sans-serif;
+			`;
+
+			dialog.innerHTML = `
+				<h3 style="margin-top: 0; color: #fff;">Key-Value Pairs</h3>
+				<div id="kv-container"></div>
+				<button id="add-kv" style="background: #404040; border: 1px solid #555; color: #fff; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 10px 5px 0 0;">Add Pair</button>
+				<button id="save-kv" style="background: #006600; border: 1px solid #555; color: #fff; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 10px 5px 0 0;">Save</button>
+				<button id="cancel-kv" style="background: #660000; border: 1px solid #555; color: #fff; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 10px 0 0 0;">Cancel</button>
+			`;
+
+			document.body.appendChild(dialog);
+
+			const container = dialog.querySelector('#kv-container');
+			const addBtn = dialog.querySelector('#add-kv');
+			const saveBtn = dialog.querySelector('#save-kv');
+			const cancelBtn = dialog.querySelector('#cancel-kv');
+
+			// Load existing pairs
+			const tempPairs = JSON.parse(JSON.stringify(this.properties.key_value_pairs));
+
+			const renderPairs = () => {
+				container.innerHTML = '';
+				Object.entries(tempPairs).forEach(([key, value], index) => {
+					const pairDiv = document.createElement('div');
+					pairDiv.style.cssText = 'display: flex; gap: 10px; margin: 5px 0; align-items: center;';
+					pairDiv.innerHTML = `
+						<input type="text" value="${key}" placeholder="Key" style="flex: 1; padding: 5px; background: #404040; border: 1px solid #555; color: #fff; border-radius: 3px;" data-type="key" data-index="${index}">
+						<input type="text" value="${value}" placeholder="Value" style="flex: 1; padding: 5px; background: #404040; border: 1px solid #555; color: #fff; border-radius: 3px;" data-type="value" data-index="${index}">
+						<button onclick="this.parentElement.remove(); delete tempPairs['${key}'];" style="background: #660000; border: 1px solid #555; color: #fff; padding: 5px 8px; border-radius: 3px; cursor: pointer;">×</button>
+					`;
+					container.appendChild(pairDiv);
+				});
+			};
+
+			renderPairs();
+
+			addBtn.onclick = () => {
+				const newKey = `key_${Object.keys(tempPairs).length + 1}`;
+				tempPairs[newKey] = '';
+				renderPairs();
+			};
+
+			// Handle input changes
+			container.addEventListener('input', (e) => {
+				if (e.target.dataset.type === 'key') {
+					const oldKey = Object.keys(tempPairs)[e.target.dataset.index];
+					const newKey = e.target.value;
+					if (oldKey !== newKey) {
+						tempPairs[newKey] = tempPairs[oldKey];
+						delete tempPairs[oldKey];
+					}
+				} else if (e.target.dataset.type === 'value') {
+					const key = Object.keys(tempPairs)[e.target.dataset.index];
+					tempPairs[key] = e.target.value;
+				}
+			});
+
+			saveBtn.onclick = () => {
+				this.properties.key_value_pairs = tempPairs;
+				document.body.removeChild(dialog);
+				this.setDirtyCanvas(true);
+			};
+
+			cancelBtn.onclick = () => {
+				document.body.removeChild(dialog);
+			};
+
+			// Close on escape
+			document.addEventListener('keydown', function escHandler(e) {
+				if (e.key === 'Escape') {
+					document.body.removeChild(dialog);
+					document.removeEventListener('keydown', escHandler);
+				}
+			});
+		};
+
+		ConfigurableNode.prototype.onExecute = function() {
+			// Process inputs and generate outputs
+			for (let i = 0; i < this.properties.output_count; i++) {
+				let outputValue = null;
+				
+				// Simple logic: pass through input if available, otherwise use key-value pairs
+				if (i < this.properties.input_count) {
+					outputValue = this.getInputData(i);
+				}
+				
+				if (outputValue === undefined || outputValue === null) {
+					const keys = Object.keys(this.properties.key_value_pairs);
+					if (keys[i]) {
+						outputValue = this.properties.key_value_pairs[keys[i]];
+					}
+				}
+				
+				this.setOutputData(i, outputValue);
+			}
+		};
+
+		ConfigurableNode.prototype.onDrawBackground = function(ctx) {
+			// Draw file info
+			if (this.properties.selected_file) {
+				ctx.fillStyle = "#666";
+				ctx.font = "10px Arial";
+				ctx.fillText(`File: ${this.properties.selected_file}`, 10, this.size[1] - 30);
+			}
+
+			// Draw KV pairs count
+			const kvCount = Object.keys(this.properties.key_value_pairs).length;
+			if (kvCount > 0) {
+				ctx.fillStyle = "#666";
+				ctx.font = "10px Arial";
+				ctx.fillText(`KV Pairs: ${kvCount}`, 10, this.size[1] - 15);
+			}
+		};
+
+		ConfigurableNode.prototype.onPropertyChanged = function(name, value) {
+			if (name === "input_count" || name === "output_count") {
+				this.updateInputsOutputs();
+			}
+		};
+
+		// Serialization - save node state
+		ConfigurableNode.prototype.onSerialize = function(o) {
+			console.log('ConfigurableNode onSerialize called');
+			o.properties = this.properties;
+			o.widgets_values = [];
+			if (this.widgets) {
+				for (let i = 0; i < this.widgets.length; i++) {
+					o.widgets_values[i] = this.widgets[i].value;
+				}
+			}
+			console.log('Serialized data:', o);
+		};
+
+		// Override the configure method to handle dynamic inputs/outputs properly
+		ConfigurableNode.prototype.configure = function(o) {
+			console.log('ConfigurableNode configure called with:', o);
+			console.log('Serialized inputs:', o.inputs);
+			console.log('Serialized outputs:', o.outputs);
+			
+			// CRITICAL: Don't recreate inputs/outputs if they're already serialized
+			// LiteGraph expects the exact same input/output structure for connections
+			if (o.inputs && o.outputs) {
+				console.log('Using serialized inputs/outputs structure');
+				
+				// Temporarily disable onPropertyChanged to prevent input/output recreation
+				const originalOnPropertyChanged = this.onPropertyChanged;
+				this.onPropertyChanged = null;
+				
+				// Call the base configure - it will restore everything including widgets
+				LiteGraph.LGraphNode.prototype.configure.call(this, o);
+				
+				// Update properties to match the actual input/output counts from serialized data
+				this.properties.input_count = this.inputs ? this.inputs.length : 0;
+				this.properties.output_count = this.outputs ? this.outputs.length : 0;
+				
+				// Update widget values to match the actual structure
+				if (this.widgets) {
+					for (let i = 0; i < this.widgets.length; i++) {
+						if (this.widgets[i].name === "Inputs") {
+							this.widgets[i].value = this.properties.input_count;
+						} else if (this.widgets[i].name === "Outputs") {
+							this.widgets[i].value = this.properties.output_count;
+						} else if (this.widgets[i].name === "File") {
+							this.widgets[i].value = this.properties.selected_file || "No file selected";
+						} else if (this.widgets[i].name === "Folder Path") {
+							this.widgets[i].value = this.properties.folder_path || "";
+						} else if (this.widgets[i].name === "Class Name") {
+							this.widgets[i].value = this.properties.class_name || "";
+						}
+					}
+				}
+				
+				// Recreate parameter widgets from key_value_pairs if they exist
+				if (this.properties.key_value_pairs && Object.keys(this.properties.key_value_pairs).length > 0) {
+					this.createParameterWidgets(this.properties.key_value_pairs);
+				}
+				
+				// Restore onPropertyChanged
+				this.onPropertyChanged = originalOnPropertyChanged;
+				
+			} else {
+				console.log('No serialized inputs/outputs, creating from properties');
+				// First restore properties and widget values
+				if (o.properties) {
+					this.properties = o.properties;
+				}
+				
+				// Restore widget values to get correct input/output counts
+				if (o.widgets_values && this.widgets) {
+					for (let i = 0; i < this.widgets.length && i < o.widgets_values.length; i++) {
+						if (this.widgets[i]) {
+							this.widgets[i].value = o.widgets_values[i];
+							// Update properties based on widget values
+							if (this.widgets[i].name === "Inputs") {
+								this.properties.input_count = o.widgets_values[i];
+							} else if (this.widgets[i].name === "Outputs") {
+								this.properties.output_count = o.widgets_values[i];
+							} else if (this.widgets[i].name === "File") {
+								this.properties.selected_file = o.widgets_values[i];
+							}
+						}
+					}
+				}
+				
+				// Create inputs/outputs based on properties
+				this.updateInputsOutputs();
+				
+				// Recreate parameter widgets from key_value_pairs if they exist
+				if (this.properties.key_value_pairs && Object.keys(this.properties.key_value_pairs).length > 0) {
+					this.createParameterWidgets(this.properties.key_value_pairs);
+				}
+				
+				// Call base configure
+				LiteGraph.LGraphNode.prototype.configure.call(this, o);
+			}
+			
+			console.log('Final inputs:', this.inputs ? this.inputs.length : 0);
+			console.log('Final outputs:', this.outputs ? this.outputs.length : 0);
+			
+			// Resize node based on content
+			this.size[1] = Math.max(200, 80 + Math.max(this.properties.input_count, this.properties.output_count) * 20 + this.widgets.length * 25);
+			if (this.setDirtyCanvas) {
+				this.setDirtyCanvas(true, true);
+			}
+			
+			console.log('ConfigurableNode configure completed');
+		};
+
+		// Register the custom node
+		LiteGraph.registerNodeType("PyG", ConfigurableNode);
+	</script>
+</body>
+</html>
