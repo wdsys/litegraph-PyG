@@ -30,7 +30,24 @@ LiteGraph for PyG is a browser-based visual editor that allows you to:
 └── 📄run_graph.py
 ```
 
-### Steps
+### Steps (Server version)
+
+If you are using the python server version as in [github page](https://github.com/wdsys/litegraph-PyG/tree/server):
+
+1. **Start the server**: In this project folder, activate a proper python environment, then run `python server.py` to start the local server.
+2. **Open the tool**: Open `http://localhost:8000` in your web browser
+3. **Get nodes from modules**: 
+   - In the left pane, use the "🔍 Get PyG Nodes from Folder" (orange button) to auto-detect your Python modules in the selected folder
+   - After parsing the modules, the detected nodes will appear below the "🔍 Get PyG Nodes from Folder" button
+   - Drag nodes from the left panel onto the canvas
+3. **Connect nodes**: Click and drag from output ports to input ports. For each node, the number of input and output ports can be modified in the node's widget.
+4. **Configure parameters**: Set nodes' parameters (that appear in the node's widget)
+5. **Run**: In the top pane, use "▶️ Run Selected PyG Script" (green button), a dialogue appears, where we
+   1. Select a Python Script (e.g., `📄run_graph.py`)
+   2. Select the python environment (e.g., `your_conda_env`, which is auto-detected)
+   3. Click `🚀 Run Script on Server`, done!
+
+### Steps (serverless, pure-browser version)
 
 1. **Open the tool**: Open `index.html` in your web browser
 2. **Get nodes from modules**: 
