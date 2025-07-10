@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "exported_at": "2025-07-08T09:36:55.248Z",
+  "nodes": [
+    {
+      "name": "StepSource",
+      "input_count": 0,
+      "output_count": 1,
+      "selected_file": "mod_source_step.py",
+      "folder_path": "local_modules",
+      "class_name": "StepSource",
+      "key_value_pairs": {
+        "initial_output": 0,
+        "final_output": 1,
+        "time_threshold": 1
+      },
+      "saved_at": "2025-07-08T09:17:43.970Z"
+    },
+    {
+      "name": "Summer",
+      "input_count": 2,
+      "output_count": 1,
+      "selected_file": "mod_summer.py",
+      "folder_path": "local_modules",
+      "class_name": "Summer",
+      "key_value_pairs": {
+        "scales": [
+          1,
+          -1
+        ]
+      },
+      "saved_at": "2025-07-08T09:19:14.421Z"
+    },
+    {
+      "name": "LeadCompensator",
+      "input_count": 1,
+      "output_count": 1,
+      "selected_file": "mod_lead_compensator.py",
+      "folder_path": "local_modules",
+      "class_name": "LeadCompensator",
+      "key_value_pairs": {
+        "k": 2,
+        "omega_num": 0.5,
+        "omega_den": 5
+      },
+      "saved_at": "2025-07-08T09:19:21.341Z"
+    },
+    {
+      "name": "ScopeSink",
+      "input_count": 1,
+      "output_count": 0,
+      "selected_file": "mod_sink_scope.py",
+      "folder_path": "local_modules",
+      "class_name": "ScopeSink",
+      "key_value_pairs": {},
+      "saved_at": "2025-07-08T09:19:49.681Z"
+    },
+    {
+      "name": "SecondOrderFilter",
+      "input_count": 1,
+      "output_count": 1,
+      "selected_file": "mod_filter2nd.py",
+      "folder_path": "local_modules",
+      "class_name": "SecondOrderFilter",
+      "key_value_pairs": {
+        "omega_n": 1,
+        "zeta": 0.3
+      },
+      "saved_at": "2025-07-08T09:35:20.942Z"
+    }
+  ]
+}

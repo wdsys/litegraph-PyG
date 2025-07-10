@@ -1,0 +1,318 @@
+{
+  "last_node_id": 5,
+  "last_link_id": 5,
+  "nodes": [
+    {
+      "id": 2,
+      "type": "PyG",
+      "pos": [
+        717.4390869140625,
+        441.61538314819336
+      ],
+      "size": {
+        "0": 210,
+        "1": 320
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "Input 1",
+          "type": "*",
+          "link": 1
+        },
+        {
+          "name": "Input 2",
+          "type": "*",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Output 1",
+          "type": "*",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "Summer",
+      "properties": {
+        "input_count": 2,
+        "output_count": 1,
+        "selected_file": "mod_summer.py",
+        "folder_path": "local_modules",
+        "class_name": "Summer",
+        "key_value_pairs": {
+          "scales": [
+            1,
+            -1
+          ]
+        }
+      },
+      "widgets_values": [
+        2,
+        1,
+        "local_modules",
+        null,
+        "mod_summer.py",
+        "Summer",
+        null,
+        "[1,-1]"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "PyG",
+      "pos": [
+        1393,
+        409
+      ],
+      "size": {
+        "0": 210,
+        "1": 325
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "Input 1",
+          "type": "*",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Output 1",
+          "type": "*",
+          "links": [
+            4,
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "SecondOrderFilter",
+      "properties": {
+        "input_count": 1,
+        "output_count": 1,
+        "selected_file": "mod_filter2nd.py",
+        "folder_path": "local_modules",
+        "class_name": "SecondOrderFilter",
+        "key_value_pairs": {
+          "omega_n": 1,
+          "zeta": 0.3
+        }
+      },
+      "widgets_values": [
+        1,
+        1,
+        "local_modules",
+        null,
+        "mod_filter2nd.py",
+        "SecondOrderFilter",
+        null,
+        "1",
+        "0.3"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "PyG",
+      "pos": [
+        1672,
+        241
+      ],
+      "size": {
+        "0": 210,
+        "1": 275
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "Input 1",
+          "type": "*",
+          "link": 4
+        }
+      ],
+      "outputs": [],
+      "title": "ScopeSink",
+      "properties": {
+        "input_count": 1,
+        "output_count": 0,
+        "selected_file": "mod_sink_scope.py",
+        "folder_path": "local_modules",
+        "class_name": "ScopeSink",
+        "key_value_pairs": {}
+      },
+      "widgets_values": [
+        1,
+        0,
+        "local_modules",
+        null,
+        "mod_sink_scope.py",
+        "ScopeSink",
+        null
+      ]
+    },
+    {
+      "id": 3,
+      "type": "PyG",
+      "pos": [
+        1065,
+        179
+      ],
+      "size": {
+        "0": 210,
+        "1": 350
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "Input 1",
+          "type": "*",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Output 1",
+          "type": "*",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "LeadCompensator",
+      "properties": {
+        "input_count": 1,
+        "output_count": 1,
+        "selected_file": "mod_lead_compensator.py",
+        "folder_path": "local_modules",
+        "class_name": "LeadCompensator",
+        "key_value_pairs": {
+          "k": 2,
+          "omega_num": 0.5,
+          "omega_den": 5
+        }
+      },
+      "widgets_values": [
+        1,
+        1,
+        "local_modules",
+        null,
+        "mod_lead_compensator.py",
+        "LeadCompensator",
+        null,
+        "2",
+        "0.5",
+        "5"
+      ]
+    },
+    {
+      "id": 1,
+      "type": "PyG",
+      "pos": [
+        408,
+        159
+      ],
+      "size": {
+        "0": 210,
+        "1": 350
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Output 1",
+          "type": "*",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "StepSource",
+      "properties": {
+        "input_count": 0,
+        "output_count": 1,
+        "selected_file": "mod_source_step.py",
+        "folder_path": "local_modules",
+        "class_name": "StepSource",
+        "key_value_pairs": {
+          "initial_output": 0,
+          "final_output": 1,
+          "time_threshold": 1
+        }
+      },
+      "widgets_values": [
+        0,
+        1,
+        "local_modules",
+        null,
+        "mod_source_step.py",
+        "StepSource",
+        null,
+        "0",
+        "1",
+        "1"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "*"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      0,
+      "*"
+    ],
+    [
+      3,
+      3,
+      0,
+      4,
+      0,
+      "*"
+    ],
+    [
+      4,
+      4,
+      0,
+      5,
+      0,
+      "*"
+    ],
+    [
+      5,
+      4,
+      0,
+      2,
+      1,
+      "*"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

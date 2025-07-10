@@ -1,0 +1,132 @@
+{
+  "nodes": [
+    {
+      "id": "node2",
+      "name": "Summer",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_summer.py",
+      "class_name": "Summer",
+      "parameters": {
+        "scales": [
+          1,
+          -1
+        ]
+      }
+    },
+    {
+      "id": "node4",
+      "name": "SecondOrderFilter",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_filter2nd.py",
+      "class_name": "SecondOrderFilter",
+      "parameters": {
+        "omega_n": 1,
+        "zeta": 0.3
+      }
+    },
+    {
+      "id": "node5",
+      "name": "ScopeSink",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_sink_scope.py",
+      "class_name": "ScopeSink",
+      "parameters": {}
+    },
+    {
+      "id": "node3",
+      "name": "LeadCompensator",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_lead_compensator.py",
+      "class_name": "LeadCompensator",
+      "parameters": {
+        "k": 2,
+        "omega_num": 0.5,
+        "omega_den": 5
+      }
+    },
+    {
+      "id": "node1",
+      "name": "StepSource",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_source_step.py",
+      "class_name": "StepSource",
+      "parameters": {
+        "initial_output": 0,
+        "final_output": 1,
+        "time_threshold": 1
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge1",
+      "source_node_id": "node1",
+      "target_node_id": "node2",
+      "source_port_idx": 0,
+      "target_port_idx": 0,
+      "properties": {
+        "signal_type": "*",
+        "weight": 1
+      }
+    },
+    {
+      "id": "edge2",
+      "source_node_id": "node2",
+      "target_node_id": "node3",
+      "source_port_idx": 0,
+      "target_port_idx": 0,
+      "properties": {
+        "signal_type": "*",
+        "weight": 1
+      }
+    },
+    {
+      "id": "edge3",
+      "source_node_id": "node3",
+      "target_node_id": "node4",
+      "source_port_idx": 0,
+      "target_port_idx": 0,
+      "properties": {
+        "signal_type": "*",
+        "weight": 1
+      }
+    },
+    {
+      "id": "edge4",
+      "source_node_id": "node4",
+      "target_node_id": "node5",
+      "source_port_idx": 0,
+      "target_port_idx": 0,
+      "properties": {
+        "signal_type": "*",
+        "weight": 1
+      }
+    },
+    {
+      "id": "edge5",
+      "source_node_id": "node4",
+      "target_node_id": "node2",
+      "source_port_idx": 0,
+      "target_port_idx": 1,
+      "properties": {
+        "signal_type": "*",
+        "weight": 1
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "description": "Exported from LiteGraph for PyG",
+    "author": "LiteGraph for PyG User",
+    "created": "2025-07-09T03:39:20.185Z",
+    "tags": [
+      "litegraph",
+      "export"
+    ]
+  }
+}

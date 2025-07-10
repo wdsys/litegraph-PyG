@@ -403,7 +403,7 @@
 				border: 2px solid #4CAF50;
 				border-radius: 8px;
 				padding: 20px;
-				min-width: 500px;
+				min-width: 600px;
 				max-width: 80%;
 				max-height: 80vh;
 				overflow-y: auto;
@@ -425,19 +425,46 @@
 				</div>
 
 				<div style="margin-bottom: 15px;">
-					<label style="display: block; margin-bottom: 5px; font-weight: bold;">Step 2: Export Graph</label>
-					<div style="display: flex; gap: 10px;">
+					<label style="display: block; margin-bottom: 5px; font-weight: bold;">Step 2: Choose Execution Method</label>
+					<div style="display: flex; gap: 10px; margin-bottom: 10px;">
+						<label style="display: flex; align-items: center; gap: 5px;">
+							<input type="radio" name="execution-method" value="server" id="server-execution" checked>
+							<span>🚀 Run via Server (Recommended)</span>
+						</label>
+						<label style="display: flex; align-items: center; gap: 5px;">
+							<input type="radio" name="execution-method" value="manual" id="manual-execution">
+							<span>📋 Manual Terminal Execution</span>
+						</label>
+					</div>
+					<div id="server-status" style="font-size: 12px; color: #aaa; margin-bottom: 10px;">Checking server status...</div>
+				</div>
+
+				<div id="python-environment-panel" style="margin-bottom: 15px;">
+					<label style="display: block; margin-bottom: 5px; font-weight: bold;">Step 3: Select Python Environment</label>
+					<select id="python-environment-select" style="width: 100%; padding: 8px; background: #404040; border: 1px solid #555; color: #fff; border-radius: 3px; margin-bottom: 10px;">
+						<option value="">Loading environments...</option>
+					</select>
+					<button id="refresh-environments-btn" style="background: #404040; border: 1px solid #555; color: #fff; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">🔄 Refresh</button>
+					<div id="environment-info" style="font-size: 12px; color: #aaa; margin-top: 10px;"></div>
+				</div>
+
+				<div id="server-execution-panel" style="margin-bottom: 15px;">
+					<div style="display: flex; gap: 10px; margin-bottom: 10px;">
+						<button id="run-server-btn" style="flex: 1; background: #4CAF50; border: 1px solid #555; color: #fff; padding: 10px 15px; border-radius: 3px; cursor: pointer; font-weight: bold;" disabled>🚀 Run Script on Server</button>
+						<button id="run-async-btn" style="flex: 1; background: #FF9800; border: 1px solid #555; color: #fff; padding: 10px 15px; border-radius: 3px; cursor: pointer; font-weight: bold;" disabled>⚡ Run Async (Long Tasks)</button>
+					</div>
+					<div id="execution-output" style="background: #1a1a1a; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; display: none;"></div>
+				</div>
+
+				<div id="manual-execution-panel" style="margin-bottom: 15px; display: none;">
+					<label style="display: block; margin-bottom: 5px; font-weight: bold;">Export Graph & Copy Command</label>
+					<div style="display: flex; gap: 10px; margin-bottom: 10px;">
 						<input type="text" id="export-filename" value="exported_graph.json" style="flex: 1; padding: 8px; background: #404040; border: 1px solid #555; color: #fff; border-radius: 3px;">
 						<button id="export-graph-btn" style="background: #404040; border: 1px solid #555; color: #fff; padding: 8px 12px; border-radius: 3px; cursor: pointer;">Export</button>
 					</div>
-				</div>
-
-				<div style="margin-bottom: 15px;">
-					<label style="display: block; margin-bottom: 5px; font-weight: bold;">Step 3: Run Command</label>
 					<div style="background: #1a1a1a; padding: 10px; border-radius: 5px; font-family: monospace; margin-bottom: 10px; white-space: pre-wrap;" id="run-command">python <span style="color: #888;">[script_path]</span> <span style="color: #888;">[exported_graph.json]</span></div>
 					<div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">
-						<strong>Note:</strong> Due to browser security restrictions, we cannot directly execute Python scripts from the browser. 
-						You'll need to run this command manually in your terminal/command prompt.
+						<strong>Note:</strong> You'll need to run this command manually in your terminal/command prompt.
 					</div>
 					<button id="copy-command-btn" style="background: #404040; border: 1px solid #555; color: #fff; padding: 8px 12px; border-radius: 3px; cursor: pointer; width: 100%;">Copy Command to Clipboard</button>
 				</div>
@@ -457,11 +484,129 @@
 			const runCommandDisplay = dialog.querySelector('#run-command');
 			const copyCommandBtn = dialog.querySelector('#copy-command-btn');
 			const closeDialogBtn = dialog.querySelector('#close-dialog-btn');
+			const serverExecutionRadio = dialog.querySelector('#server-execution');
+			const manualExecutionRadio = dialog.querySelector('#manual-execution');
+			const serverExecutionPanel = dialog.querySelector('#server-execution-panel');
+			const manualExecutionPanel = dialog.querySelector('#manual-execution-panel');
+			const serverStatusDiv = dialog.querySelector('#server-status');
+			const runServerBtn = dialog.querySelector('#run-server-btn');
+			const runAsyncBtn = dialog.querySelector('#run-async-btn');
+			const executionOutput = dialog.querySelector('#execution-output');
+			const pythonEnvironmentSelect = dialog.querySelector('#python-environment-select');
+			const refreshEnvironmentsBtn = dialog.querySelector('#refresh-environments-btn');
+			const environmentInfo = dialog.querySelector('#environment-info');
+			const pythonEnvironmentPanel = dialog.querySelector('#python-environment-panel');
 
 			// Variables to store selected paths
 			let selectedScriptPath = '';
 			let selectedScriptDir = '';
 			let exportedGraphPath = exportFilenameInput.value;
+			let selectedScriptFile = null;
+			let serverAvailable = false;
+			let availableEnvironments = [];
+			let selectedPythonExecutable = '';
+
+			// Check server health
+			async function checkServerHealth() {
+				try {
+					const response = await fetch('http://localhost:8080/api/health');
+					if (response.ok) {
+						const data = await response.json();
+						serverAvailable = true;
+						serverStatusDiv.innerHTML = `<span style="color: #4CAF50;">✅ Server is running</span>`;
+						runServerBtn.disabled = false;
+						runAsyncBtn.disabled = false;
+						// Load environments when server is available
+						loadEnvironments();
+					} else {
+						throw new Error('Server not responding');
+					}
+				} catch (error) {
+					serverAvailable = false;
+					serverStatusDiv.innerHTML = `<span style="color: #f44336;">❌ Server not available. Please start the server first.</span>`;
+					runServerBtn.disabled = true;
+					runAsyncBtn.disabled = true;
+					// Auto-switch to manual execution if server is not available
+					manualExecutionRadio.checked = true;
+					updateExecutionMethod();
+				}
+			}
+
+			// Update execution method panels
+			function updateExecutionMethod() {
+				if (serverExecutionRadio.checked) {
+					serverExecutionPanel.style.display = 'block';
+					manualExecutionPanel.style.display = 'none';
+					pythonEnvironmentPanel.style.display = 'block';
+				} else {
+					serverExecutionPanel.style.display = 'none';
+					manualExecutionPanel.style.display = 'block';
+					pythonEnvironmentPanel.style.display = 'none';
+				}
+			}
+
+			// Load available Python environments
+			async function loadEnvironments() {
+				if (!serverAvailable) {
+					pythonEnvironmentSelect.innerHTML = '<option value="">Server not available</option>';
+					return;
+				}
+
+				try {
+					pythonEnvironmentSelect.innerHTML = '<option value="">Loading...</option>';
+					const response = await fetch('http://localhost:8080/api/environments');
+					if (response.ok) {
+						const data = await response.json();
+						availableEnvironments = data.environments;
+						updateEnvironmentSelect();
+					} else {
+						throw new Error('Failed to load environments');
+					}
+				} catch (error) {
+					console.error('Error loading environments:', error);
+					pythonEnvironmentSelect.innerHTML = '<option value="">Error loading environments</option>';
+					environmentInfo.innerHTML = '<span style="color: #f44336;">Failed to load environments. Please check server connection.</span>';
+				}
+			}
+
+			// Update environment select dropdown
+			function updateEnvironmentSelect() {
+				pythonEnvironmentSelect.innerHTML = '';
+				
+				if (availableEnvironments.length === 0) {
+					pythonEnvironmentSelect.innerHTML = '<option value="">No environments found</option>';
+					return;
+				}
+
+				availableEnvironments.forEach((env, index) => {
+					const option = document.createElement('option');
+					option.value = env.path;
+					option.textContent = env.name;
+					if (index === 0) {
+						option.selected = true;
+						selectedPythonExecutable = env.path;
+						updateEnvironmentInfo(env);
+					}
+					pythonEnvironmentSelect.appendChild(option);
+				});
+			}
+
+			// Update environment info display
+			function updateEnvironmentInfo(env) {
+				if (!env) {
+					environmentInfo.innerHTML = '';
+					return;
+				}
+
+				let info = `<strong>Type:</strong> ${env.type}`;
+				if (env.version) {
+					info += ` | <strong>Version:</strong> ${env.version}`;
+				}
+				if (env.env_path) {
+					info += `<br><strong>Path:</strong> ${env.env_path}`;
+				}
+				environmentInfo.innerHTML = info;
+			}
 
 			// Update the command display
 			function updateCommandDisplay() {
@@ -469,6 +614,74 @@
 					runCommandDisplay.innerHTML = `python "${selectedScriptPath}" "${exportedGraphPath}"`;
 				} else {
 					runCommandDisplay.innerHTML = `python <span style="color: #888;">[script_path]</span> <span style="color: #888;">[exported_graph.json]</span>`;
+				}
+			}
+
+			// Execute script on server
+			async function executeOnServer(async = false) {
+				if (!selectedScriptFile) {
+					alert('Please select a Python script first.');
+					return;
+				}
+
+				if (!serverAvailable) {
+					alert('Server is not available. Please start the server first.');
+					return;
+				}
+
+				// Get current graph data
+				const liteGraphData = graph.serialize();
+				const pyInGraphData = convertToPyInGraphFormat(liteGraphData);
+
+				// Show loading state
+				executionOutput.style.display = 'block';
+				executionOutput.innerHTML = '<div style="color: #FF9800;">⏳ Executing script...</div>';
+				runServerBtn.disabled = true;
+				runAsyncBtn.disabled = true;
+
+				try {
+					const endpoint = async ? '/api/execute_async' : '/api/execute';
+					const response = await fetch(`http://localhost:8080${endpoint}`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+						script_path: selectedScriptPath,
+						graph_data: pyInGraphData,
+						python_executable: selectedPythonExecutable
+					})
+					});
+
+					const result = await response.json();
+
+					if (async && result.process_id) {
+						// Handle async execution
+						executionOutput.innerHTML = `<div style="color: #4CAF50;">✅ Script started asynchronously</div><div style="color: #aaa; font-size: 11px;">Process ID: ${result.process_id}</div>`;
+						// You could add polling here to check status
+					} else if (result.success) {
+						// Handle successful execution
+						let output = '<div style="color: #4CAF50;">✅ Script executed successfully</div>';
+						if (result.stdout) {
+							output += `<div style="color: #ccc; margin-top: 10px;"><strong>Output:</strong></div><pre style="color: #ccc; white-space: pre-wrap; margin: 5px 0;">${result.stdout}</pre>`;
+						}
+						executionOutput.innerHTML = output;
+					} else {
+						// Handle execution error
+						let output = '<div style="color: #f44336;">❌ Script execution failed</div>';
+						if (result.stderr) {
+							output += `<div style="color: #f44336; margin-top: 10px;"><strong>Error:</strong></div><pre style="color: #f44336; white-space: pre-wrap; margin: 5px 0;">${result.stderr}</pre>`;
+						}
+						if (result.stdout) {
+							output += `<div style="color: #ccc; margin-top: 10px;"><strong>Output:</strong></div><pre style="color: #ccc; white-space: pre-wrap; margin: 5px 0;">${result.stdout}</pre>`;
+						}
+						executionOutput.innerHTML = output;
+					}
+				} catch (error) {
+					executionOutput.innerHTML = `<div style="color: #f44336;">❌ Error communicating with server: ${error.message}</div>`;
+				} finally {
+					runServerBtn.disabled = false;
+					runAsyncBtn.disabled = false;
 				}
 			}
 
@@ -489,19 +702,16 @@
 						});
 
 						const file = await fileHandle.getFile();
+						selectedScriptFile = file;
 						selectedScriptPath = file.name; // Just the filename for display
 
-						// Try to get the directory path if possible
-						try {
-							// This might not work in all browsers due to security restrictions
-							const dirHandle = await fileHandle.getParent();
-							if (dirHandle) {
-								selectedScriptDir = dirHandle.name || '';
-							}
-						} catch (err) {
-							console.log('Could not get parent directory:', err);
-							// This is expected in many browsers, so we don't show an error
-						}
+						// Get the script path for execution
+					if (fileHandle.name) {
+						selectedScriptPath = fileHandle.name;
+						// Note: File System Access API doesn't provide parent directory access
+						// Users need to include subdirectory in the path if needed
+						selectedScriptDir = '';
+					}
 
 						scriptPathInput.value = selectedScriptPath;
 						updateCommandDisplay();
@@ -515,6 +725,24 @@
 					}
 				}
 			};
+
+			// Handle execution method change
+			serverExecutionRadio.onchange = updateExecutionMethod;
+			manualExecutionRadio.onchange = updateExecutionMethod;
+
+			// Handle environment selection
+			pythonEnvironmentSelect.onchange = () => {
+				selectedPythonExecutable = pythonEnvironmentSelect.value;
+				const selectedEnv = availableEnvironments.find(env => env.path === selectedPythonExecutable);
+				updateEnvironmentInfo(selectedEnv);
+			};
+
+			// Handle refresh environments
+			refreshEnvironmentsBtn.onclick = loadEnvironments;
+
+			// Handle server execution buttons
+			runServerBtn.onclick = () => executeOnServer(false);
+			runAsyncBtn.onclick = () => executeOnServer(true);
 
 			// Handle export filename change
 			exportFilenameInput.oninput = () => {
@@ -559,6 +787,10 @@
 					document.removeEventListener('keydown', escHandler);
 				}
 			});
+
+			// Initialize
+			checkServerHealth();
+			updateExecutionMethod();
 		}
 
 		function convertToPyInGraphFormat(liteGraphData) {
