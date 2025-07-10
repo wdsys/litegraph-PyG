@@ -231,7 +231,7 @@ def execute_script():
                 script_path = relative_path
                 print(f"Using relative path: {script_path}")
             else:
-                # Search for the script in subdirectories
+                # Search for the script in subdirectories of WORKING_DIR
                 found_script = None
                 script_name = script_path.name
                 print(f"Searching for script '{script_name}' in subdirectories...")
@@ -245,11 +245,25 @@ def execute_script():
                             print(f"Found script in subdirectory: {found_script}")
                             break
                 
+                # If not found in subdirectories, search in sibling directories
+                if not found_script:
+                    project_root = WORKING_DIR.parent
+                    print(f"Searching for script '{script_name}' in sibling directories of project root: {project_root}...")
+                    
+                    for sibling_dir in project_root.iterdir():
+                        if sibling_dir.is_dir() and sibling_dir != WORKING_DIR:
+                            potential_script = sibling_dir / script_name
+                            print(f"Checking sibling: {potential_script}")
+                            if potential_script.exists():
+                                found_script = potential_script
+                                print(f"Found script in sibling directory: {found_script}")
+                                break
+                
                 if found_script:
                     script_path = found_script
                     print(f"Using found script: {script_path}")
                 else:
-                    error_msg = f'Script file not found: {script_path} (also tried: {relative_path} and subdirectories)'
+                    error_msg = f'Script file not found: {script_path} (also tried: {relative_path}, subdirectories, and sibling directories)'
                     print(f"Error: {error_msg}")
                     return jsonify({'error': error_msg}), 400
             
@@ -337,6 +351,7 @@ def execute_script_async():
         script_path = data.get('script_path')
         graph_data = data.get('graph_data')
         working_directory = data.get('working_directory', str(WORKING_DIR))
+        python_executable = data.get('python_executable', sys.executable)
         
         if not script_path:
             return jsonify({'error': 'No script path provided'}), 400
@@ -347,7 +362,38 @@ def execute_script_async():
         # Validate script path
         script_path = Path(script_path)
         if not script_path.exists():
-            return jsonify({'error': f'Script file not found: {script_path}'}), 400
+            # Try relative to working directory
+            relative_path = WORKING_DIR / script_path
+            
+            if relative_path.exists():
+                script_path = relative_path
+            else:
+                # Search for the script in subdirectories of WORKING_DIR
+                found_script = None
+                script_name = script_path.name
+                
+                for subdir in WORKING_DIR.iterdir():
+                    if subdir.is_dir():
+                        potential_script = subdir / script_name
+                        if potential_script.exists():
+                            found_script = potential_script
+                            break
+                
+                # If not found in subdirectories, search in sibling directories
+                if not found_script:
+                    project_root = WORKING_DIR.parent
+                    
+                    for sibling_dir in project_root.iterdir():
+                        if sibling_dir.is_dir() and sibling_dir != WORKING_DIR:
+                            potential_script = sibling_dir / script_name
+                            if potential_script.exists():
+                                found_script = potential_script
+                                break
+                
+                if found_script:
+                    script_path = found_script
+                else:
+                    return jsonify({'error': f'Script file not found: {script_path} (also tried: {relative_path}, subdirectories, and sibling directories)'}), 400
             
         if not script_path.suffix == '.py':
             return jsonify({'error': 'Script must be a Python file (.py)'}), 400
