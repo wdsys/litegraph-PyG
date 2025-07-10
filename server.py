@@ -278,9 +278,11 @@ def execute_script():
             temp_graph_path = temp_file.name
         
         try:
-            # Change to working directory
+            # Change to script's directory as working directory
+            script_directory = script_path.parent
             original_cwd = os.getcwd()
-            os.chdir(working_directory)
+            os.chdir(script_directory)
+            print(f"Changed working directory to: {script_directory}")
             
             # Execute the script
             print(f"Executing: {python_executable} {script_path} {temp_graph_path}")
@@ -296,7 +298,7 @@ def execute_script():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd=working_directory,
+                cwd=script_directory,
                 env=env
             )
             
@@ -409,8 +411,10 @@ def execute_script_async():
         # Start process asynchronously
         def run_async():
             try:
+                # Change to script's directory as working directory
+                script_directory = script_path.parent
                 original_cwd = os.getcwd()
-                os.chdir(working_directory)
+                os.chdir(script_directory)
                 
                 cmd = [python_executable, str(script_path), temp_graph_path]
                 
@@ -424,7 +428,7 @@ def execute_script_async():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    cwd=working_directory,
+                    cwd=script_directory,
                     env=env
                 )
                 
