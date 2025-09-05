@@ -1,0 +1,236 @@
+{
+  "last_node_id": 4,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 3,
+      "type": "PyG",
+      "pos": [
+        1085,
+        193
+      ],
+      "size": {
+        "0": 210,
+        "1": 275
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "Input 1",
+          "type": "*",
+          "link": 3
+        }
+      ],
+      "outputs": [],
+      "title": "WaterSink",
+      "properties": {
+        "input_count": 1,
+        "output_count": 0,
+        "selected_file": "mod_water_sink.py",
+        "folder_path": "local_modules",
+        "class_name": "WaterSink",
+        "key_value_pairs": {}
+      },
+      "widgets_values": [
+        1,
+        0,
+        "local_modules",
+        null,
+        "mod_water_sink.py",
+        "WaterSink",
+        null
+      ]
+    },
+    {
+      "id": 4,
+      "type": "PyG",
+      "pos": [
+        1130,
+        593
+      ],
+      "size": {
+        "0": 210,
+        "1": 275
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "Input 1",
+          "type": "*",
+          "link": 4
+        }
+      ],
+      "outputs": [],
+      "title": "WaterSink",
+      "properties": {
+        "input_count": 1,
+        "output_count": 0,
+        "selected_file": "mod_water_sink.py",
+        "folder_path": "local_modules",
+        "class_name": "WaterSink",
+        "key_value_pairs": {}
+      },
+      "widgets_values": [
+        1,
+        0,
+        "local_modules",
+        null,
+        "mod_water_sink.py",
+        "WaterSink",
+        null
+      ]
+    },
+    {
+      "id": 1,
+      "type": "PyG",
+      "pos": [
+        166,
+        346
+      ],
+      "size": {
+        "0": 210,
+        "1": 300
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Output 1",
+          "type": "*",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "WaterSource",
+      "properties": {
+        "input_count": 0,
+        "output_count": 1,
+        "selected_file": "mod_water_source.py",
+        "folder_path": "local_modules",
+        "class_name": "WaterSource",
+        "key_value_pairs": {
+          "输出流量": 100
+        }
+      },
+      "widgets_values": [
+        0,
+        1,
+        "local_modules",
+        null,
+        "mod_water_source.py",
+        "WaterSource",
+        null,
+        "100"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "PyG",
+      "pos": [
+        639,
+        370
+      ],
+      "size": {
+        "0": 210,
+        "1": 445
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "Input 1",
+          "type": "*",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Output 1",
+          "type": "*",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "Output 2",
+          "type": "*",
+          "links": [
+            4
+          ],
+          "slot_index": 1
+        }
+      ],
+      "title": "UltrafiltrationUnit",
+      "properties": {
+        "input_count": 1,
+        "output_count": 2,
+        "selected_file": "mod_ultrafiltration_unit.py",
+        "folder_path": "local_modules",
+        "class_name": "UltrafiltrationUnit",
+        "key_value_pairs": {
+          "回收率": 0.95,
+          "给水泵扬程": 25,
+          "膜型号": "ZW1500",
+          "膜面积": 57,
+          "产水通量": 45,
+          "反洗泵扬程": 25
+        }
+      },
+      "widgets_values": [
+        1,
+        2,
+        "local_modules",
+        null,
+        "mod_ultrafiltration_unit.py",
+        "UltrafiltrationUnit",
+        null,
+        "0.95",
+        "25",
+        "ZW1500",
+        "57",
+        "45",
+        "25"
+      ]
+    }
+  ],
+  "links": [
+    [
+      2,
+      1,
+      0,
+      2,
+      0,
+      "*"
+    ],
+    [
+      3,
+      2,
+      0,
+      3,
+      0,
+      "*"
+    ],
+    [
+      4,
+      2,
+      1,
+      4,
+      0,
+      "*"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

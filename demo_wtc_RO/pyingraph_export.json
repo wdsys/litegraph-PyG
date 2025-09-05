@@ -1,0 +1,52 @@
+{
+  "nodes": [
+    {
+      "id": "node3",
+      "name": "WaterSource",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_water_source.py",
+      "class_name": "WaterSource",
+      "parameters": {
+        "输出流量": 100
+      }
+    },
+    {
+      "id": "node4",
+      "name": "UltrafiltrationUnit",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_ultrafiltration_unit.py",
+      "class_name": "UltrafiltrationUnit",
+      "parameters": {
+        "回收率": 0.95,
+        "给水泵扬程": 50
+      }
+    },
+    {
+      "id": "node6",
+      "name": "WaterSink",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_water_sink.py",
+      "class_name": "WaterSink",
+      "parameters": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge1",
+      "source_node_id": "node3",
+      "source_output_index": 0,
+      "target_node_id": "node4",
+      "target_input_index": 0
+    },
+    {
+      "id": "edge2",
+      "source_node_id": "node4",
+      "source_output_index": 0,
+      "target_node_id": "node6",
+      "target_input_index": 0
+    }
+  ]
+}

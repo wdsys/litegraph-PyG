@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    {
+      "id": "node1",
+      "name": "WaterSource",
+      "folder_url": "",
+      "folder_path": "local_modules",
+      "class_file": "mod_water_source",
+      "class_name": "WaterSource",
+      "parameters": {
+        "输出流量": 100
+      }
+    }
+  ],
+  "edges": []
+}
