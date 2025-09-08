@@ -56,7 +56,7 @@ class WaterSink(BlockBase):
             
         # 记录接收到的流量
         current_time = time.time()
-        flow_rate = self._inputs[0]
+        flow_rate = self._inputs[0] if self._inputs and self._inputs[0] is not None else 0.0
         
         # 打印接收到的输入
         timestamp = time.strftime("%H:%M:%S", time.localtime(current_time))

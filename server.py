@@ -298,6 +298,7 @@ def execute_script():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding='utf-8',
                 cwd=script_directory,
                 env=env
             )
@@ -428,6 +429,7 @@ def execute_script_async():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
+                    encoding='utf-8',
                     cwd=script_directory,
                     env=env
                 )

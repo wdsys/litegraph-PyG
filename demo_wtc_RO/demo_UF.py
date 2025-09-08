@@ -36,6 +36,14 @@ def main(argv=None):
     for _ in range(10):
         # traverse the graph with a built-in, simple algorithm
         loader.simple_traverse_graph(time=0)
+    
+    # for each node, check if they have a method `compute_sizing`,
+    # if yes, call it
+    for node_id, node_data in nx_graph.nodes(data=True):
+        instance = node_data.get('instance')
+        if instance and hasattr(instance, 'compute_sizing'):
+            result = instance.compute_sizing()
+            print(result)
 
 if __name__ == '__main__':
     import sys
